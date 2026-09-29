@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.template
+target/
+postgres_data/
+.git/
+.vscode/
+.target/
