@@ -17,7 +17,11 @@ services:
       timeout: 5s
       retries: 10
   
+    # Solo se levanta a propósito (docker compose --profile backend up).
+    # Sin el perfil, Spring Boot (spring-boot-docker-compose) levanta solo postgres
+    # y no intenta construir esta imagen ni ocupar el puerto 8080.
   backend:
+    profiles: ["backend"]
     build: .
     depends_on:
       postgres:
@@ -27,5 +31,6 @@ services:
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     ports:
       - "8080:8080"
