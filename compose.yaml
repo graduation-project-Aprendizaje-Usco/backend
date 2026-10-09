@@ -1,3 +1,13 @@
+# Entorno local de Aprendizaje USCO.
+#
+#   docker compose up -d                        → PostgreSQL + pgAdmin (para correr el backend con mvnw)
+#   docker compose --profile backend up --build → todo en Docker, incluido el backend
+#   docker compose stop                         → detener sin borrar datos
+#
+# Los puertos se publican solo en 127.0.0.1: accesibles desde tu equipo,
+# no desde otros dispositivos de la red (pgAdmin no pide login).
+
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -8,7 +18,7 @@ services:
       POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
       POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5433:5432'
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,21 +26,50 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-  
-    # Solo se levanta a propósito (docker compose --profile backend up).
-    # Sin el perfil, Spring Boot (spring-boot-docker-compose) levanta solo postgres
-    # y no intenta construir esta imagen ni ocupar el puerto 8080.
+
+
+# Cliente web de PostgreSQL: http://localhost:5050
+  pgadmin:
+    image: dpage/pgadmin4:9
+    env_file:
+      - .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - '127.0.0.1:5050:80'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      # Spring Boot (spring-boot-docker-compose) no intenta conectarse ni esperar a este servicio.
+      org.springframework.boot.ignore: 'true'
+
+
+# Solo se levanta a propósito (docker compose --profile backend up).
+# Sin el perfil, Spring Boot (spring-boot-docker-compose) levanta solo postgres
+# y no intenta construir esta imagen ni ocupar el puerto 8080.
   backend:
     profiles: ["backend"]
     build: .
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${SPRING_DATASOURCE_DB}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      # Perfil dev = migraciones + usuarios de prueba. En staging/producción se define otro valor.
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     ports:
-      - "8080:8080"
+      - '127.0.0.1:8080:8080'
+
+volumes:
+  pgadmin_data:
+

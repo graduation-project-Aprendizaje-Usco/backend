@@ -130,9 +130,9 @@ Usuarios de prueba (solo desarrollo y staging):
 
 | Rol | Correo | Contraseña |
 |---|---|---|
-| Estudiante | _por definir_ | _por definir_ |
-| Docente | _por definir_ | _por definir_ |
-| Administrador | _por definir_ | _por definir_ |
+| Estudiante | estudiante@aprendizaje.test |Estudiante2026* |
+| Docente | docente@aprendizaje.test | Docente2026* |
+| Administrador | admin@aprendizaje.test | Admin2026* |
 
 ## 8. Responsables por módulo
 
