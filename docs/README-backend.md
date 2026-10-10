@@ -62,7 +62,8 @@ Variables de entorno (en staging se definen en el servicio de hosting, **nunca e
 
 | Variable | Descripción | Valor en desarrollo |
 |---|---|---|
-| `JWT_SECRET` | Llave para firmar los tokens (mínimo 32 caracteres) | valor por defecto de `application.yml` |
+| `JWT_SECRET` | Llave para firmar los tokens (mínimo 32 caracteres) | valor por defecto de `application.properties` |
+| `JWT_EXPIRATION_MINUTES` | Duración del token en minutos | `120` |
 | `CORS_ORIGINS` | Orígenes permitidos para el frontend | `http://localhost:5173` |
 | `SPRING_PROFILES_ACTIVE` | Perfil activo | `dev` |
 | `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Conexión a la base en staging | — |
@@ -96,7 +97,7 @@ src/main/resources/db/migration/   migraciones Flyway
 ## 6. Convenciones de la API
 
 - Todas las rutas empiezan por `/api` y usan sustantivos en plural: `/api/diagnosticos`, `/api/ejercicios/{id}/intentos`.
-- Rutas públicas: solo `/api/auth/**`, `/actuator/health` y Swagger. Todo lo demás exige `Authorization: Bearer <token>`.
+- Rutas públicas: solo `POST /api/auth/login`, `POST /api/auth/registro`, `/actuator/health` y Swagger. Todo lo demás (incluido `GET /api/auth/me`) exige `Authorization: Bearer <token>`.
 - Restricción por rol con `@PreAuthorize("hasRole('DOCENTE')")` en el controlador o servicio. Roles: `ESTUDIANTE`, `DOCENTE`, `ADMIN`.
 - Los controladores reciben y devuelven **DTO**, nunca entidades.
 - Errores con un único formato, generado por el manejador global en `common/`:

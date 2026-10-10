@@ -3,6 +3,7 @@ package co.edu.usco.aprendizaje_usco.security;
 import java.util.Set;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -40,7 +41,9 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/actuator/health",
+                // Solo login y registro son públicos; /api/auth/me exige token.
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/registro").permitAll()
+                .requestMatchers("/actuator/health",
                                  "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated())
             // NUEVO: 401 y 403 en el formato estándar de ErrorResponse
