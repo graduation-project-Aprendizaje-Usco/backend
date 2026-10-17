@@ -12,7 +12,6 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 
 /**
  * Firma (JwtEncoder) y validación (JwtDecoder) de los tokens con una llave
@@ -38,16 +37,13 @@ public class JwtConfig {
     /**
      * Convierte el claim "rol" del token (ej. "DOCENTE") en la autoridad
      * "ROLE_DOCENTE", que es lo que revisa @PreAuthorize("hasRole('DOCENTE')").
+     * JwtRoleConverter (SCRUM-12) descarta cualquier rol que no sea uno de los 3 válidos.
      * El nombre del usuario autenticado queda como el claim "sub" (su id).
      */
     @Bean
-    JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter roles = new JwtGrantedAuthoritiesConverter();
-        roles.setAuthoritiesClaimName(JwtService.CLAIM_ROL);
-        roles.setAuthorityPrefix("ROLE_");
-
+    JwtAuthenticationConverter jwtAuthenticationConverter(JwtRoleConverter jwtRoleConverter) {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(roles);
+        converter.setJwtGrantedAuthoritiesConverter(jwtRoleConverter);
         return converter;
     }
 
