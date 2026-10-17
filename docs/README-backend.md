@@ -1,5 +1,7 @@
 # Aprendizaje USCO — Backend
 
+[![CI](https://github.com/aprendizaje-usco-project/aprendizaje-usco-backend/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/aprendizaje-usco-project/aprendizaje-usco-backend/actions/workflows/ci.yml?query=branch%3Adevelop)
+
 API REST de **Aprendizaje USCO**, plataforma web de diagnóstico, práctica adaptativa y analítica de aprendizaje para Cálculo Diferencial (Proyecto Integrador II, Ingeniería de Software, Universidad Surcolombiana).
 
 | | |

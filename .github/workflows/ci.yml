@@ -1,0 +1,53 @@
+# Integración continua del backend.
+# Compila y corre TODAS las pruebas (unitarias + integración con Testcontainers)
+# en cada push y PR hacia develop y main. El job "build" es el check obligatorio
+# configurado en GitHub › Settings › Rules para poder fusionar.
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+# Si llega un push nuevo al mismo PR, se cancela la corrida anterior.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 21 (Temurin) con caché de Maven
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Desde Windows el wrapper suele quedar en git sin permiso de ejecución.
+      - name: Dar permiso de ejecución a mvnw
+        run: chmod +x mvnw
+
+      # verify = compilar + pruebas + empaquetar. Testcontainers usa el Docker del runner.
+      - name: Compilar y probar
+        run: ./mvnw -B -ntp verify
+
+      - name: Guardar reportes de pruebas si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes-surefire
+          path: target/surefire-reports/
+          retention-days: 7
