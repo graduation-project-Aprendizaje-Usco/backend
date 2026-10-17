@@ -12,9 +12,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("app.jwt")
 public record JwtProperties(String secret, long expirationMinutes) {
 
-    /** HS256 exige una llave de al menos 256 bits; si no, la app no arranca. */
+    /**
+     * HS256 exige una llave de al menos 256 bits; si no, la app no arranca.
+     * Fuera del perfil dev no hay valor por defecto: sin JWT_SECRET la app tampoco arranca.
+     */
     public JwtProperties {
-        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("Falta la variable de entorno JWT_SECRET (llave para firmar los tokens). "
+                    + "En local usa el perfil dev; en staging o producción defínela en el hosting.");
+        }
+        if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("app.jwt.secret (JWT_SECRET) debe tener mínimo 32 caracteres");
         }
         if (expirationMinutes <= 0) {

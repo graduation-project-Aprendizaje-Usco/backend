@@ -2,11 +2,13 @@ package co.edu.usco.aprendizaje_usco.modulos.usuario.service;
 
 import co.edu.usco.aprendizaje_usco.common.exception.ConflictoException;
 import co.edu.usco.aprendizaje_usco.common.exception.NoAutenticadoException;
+import co.edu.usco.aprendizaje_usco.common.exception.ReglaNegocioException;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.AuthResponse;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.LoginRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.RegistroRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.UsuarioResponse;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.NombreRol;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.model.ProgramaAcademico;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Rol;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Usuario;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.RolRepository;
@@ -75,7 +77,8 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalStateException("Falta el rol ESTUDIANTE en la base de datos"));
         Usuario usuario = new Usuario(request.nombres().trim(), request.apellidos().trim(), correo,
                 passwordEncoder.encode(request.password()), estudiante);
-        usuario.setProgramaAcademico(textoOpcional(request.programaAcademico()));
+        // Se guarda el nombre oficial del programa (ej. "ingeniería civil" → "Ingeniería Civil").
+        usuario.setProgramaAcademico(nombreOficialDelPrograma(request.programaAcademico()));
 
         // saveAndFlush: si dos registros con el mismo correo llegan a la vez, la base
         // rechaza el segundo (uq_usuario_correo) y el GlobalExceptionHandler responde 409.
@@ -91,8 +94,11 @@ public class AuthService {
                 .orElseThrow(() -> new NoAutenticadoException(SESION_INVALIDA));
     }
 
-    private static String textoOpcional(String texto) {
-        return texto == null || texto.isBlank() ? null : texto.trim();
+    /** @Valid ya garantiza que el programa es de la lista; aquí solo se toma su nombre oficial. */
+    private static String nombreOficialDelPrograma(String texto) {
+        return ProgramaAcademico.desdeNombre(texto)
+                .map(ProgramaAcademico::getNombre)
+                .orElseThrow(() -> new ReglaNegocioException("Elige un programa académico de la lista"));
     }
 
 }
