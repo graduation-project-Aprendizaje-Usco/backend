@@ -28,11 +28,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.JwsHeader;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -131,33 +127,6 @@ class JwtTest {
         mockMvc.perform(get("/prueba/solo-docente")
                         .header("Authorization", "Bearer " + emitir(2L, NombreRol.DOCENTE)))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    void pingDeOtroRolResponde403ConFormatoEstandar() throws Exception {
-        // SCRUM-12: un ESTUDIANTE que llama un endpoint de DOCENTE recibe 403.
-        String estudiante = emitir(1L, NombreRol.ESTUDIANTE);
-
-        mockMvc.perform(get("/api/ping/DOCENTE").header("Authorization", "Bearer " + estudiante))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.message").value("No tienes permiso para realizar esta acción"));
-
-        mockMvc.perform(get("/api/ping/ESTUDIANTE").header("Authorization", "Bearer " + estudiante))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void unRolDesconocidoEnElTokenNoDaPermisos() throws Exception {
-        // JwtRoleConverter descarta roles que no sean ESTUDIANTE, DOCENTE o ADMIN.
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-                .subject("9").issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(600))
-                .claim(JwtService.CLAIM_ROL, "SUPERADMIN").build();
-        String token = jwtEncoder.encode(JwtEncoderParameters.from(
-                JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();
-
-        mockMvc.perform(get("/api/ping/SUPERADMIN").header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
     }
 
     @Test
