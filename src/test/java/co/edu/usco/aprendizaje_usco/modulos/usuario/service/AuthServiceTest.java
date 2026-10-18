@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import co.edu.usco.aprendizaje_usco.common.exception.ConflictoException;
 import co.edu.usco.aprendizaje_usco.common.exception.NoAutenticadoException;
+import co.edu.usco.aprendizaje_usco.common.exception.ReglaNegocioException;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.AuthResponse;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.LoginRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.RegistroRequest;
@@ -117,8 +118,21 @@ class AuthServiceTest {
         assertThat(guardado.getValue().getPasswordHash()).isEqualTo("$2a$10$hash");
         assertThat(guardado.getValue().getRol()).isSameAs(rolEstudiante);
         assertThat(guardado.getValue().estaActivo()).isTrue();
-        assertThat(guardado.getValue().getProgramaAcademico()).isNull();
+        // Se guarda el nombre oficial del programa aunque llegue con otras mayúsculas o espacios.
+        assertThat(guardado.getValue().getProgramaAcademico()).isEqualTo("Ingeniería de Software");
         assertThat(respuesta.rol()).isEqualTo(NombreRol.ESTUDIANTE);
+    }
+
+    @Test
+    void registroConProgramaFueraDeLaListaLanza422YNoGuarda() {
+        // Normalmente @Valid lo rechaza antes con 400; el servicio no confía en eso.
+        when(rolRepository.findByNombre(NombreRol.ESTUDIANTE)).thenReturn(Optional.of(rolEstudiante));
+        RegistroRequest medicina = new RegistroRequest("Beto", "Gómez", "u20201000002@usco.edu.co",
+                "Clave2026*", "Medicina");
+
+        assertThatThrownBy(() -> authService.registrar(medicina))
+                .isInstanceOf(ReglaNegocioException.class);
+        verify(usuarioRepository, never()).saveAndFlush(any());
     }
 
     // ------------------------------------------------------------ /me
@@ -155,7 +169,7 @@ class AuthServiceTest {
     }
 
     private static RegistroRequest registro(String correo) {
-        return new RegistroRequest("Beto", "Gómez", correo, "Clave2026*", "  ");
+        return new RegistroRequest("Beto", "Gómez", correo, "Clave2026*", "  ingeniería de SOFTWARE ");
     }
 
 }
