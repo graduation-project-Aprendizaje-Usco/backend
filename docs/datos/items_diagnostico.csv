@@ -1,0 +1,25 @@
+﻿numero;dimension;enunciado;opcion_a;opcion_b;opcion_c;opcion_d;respuesta_correcta;imagen;imagen_alt;observaciones
+1;ALGEBRAICA;Si $3x + 5 = 20$, entonces $x$ es:;$3$;$5$;$15$;$25$;B;;;Según el cap. 3 del informe, tiene efecto techo (la gran mayoría lo acierta), así que discrimina poco. Se conserva sin cambios en la v2.0.
+2;ALGEBRAICA;Simplifique: $2x + 3x - 4$;$5x - 4$;$5x$;$2x - 4$;$3x - 4$;A;;;
+3;ALGEBRAICA;El resultado de $(x + 2)(x + 3)$ es:;$x^2 + 5x + 6$;$x^2 + 6$;$x^2 + 5x$;$2x^2 + 6$;A;;;
+4;ALGEBRAICA;Si $f(x) = 2x - 1$, entonces $f(3)$ es:;$5$;$6$;$7$;$4$;A;;;
+5;ALGEBRAICA;Resolver: $x^2 = 16$;$x = 4$;$x = -4$;$x = \pm 4$;$x = 8$;C;;;
+6;ALGEBRAICA;Factorizar: $x^2 - 9$;$(x - 3)(x + 3)$;$(x - 9)(x + 1)$;$(x - 3)^2$;$x(x - 9)$;A;;;
+7;ALGEBRAICA;Si $2(x - 3) = 4$, entonces $x$ es:;$2$;$5$;$1$;$3$;B;;;
+8;ALGEBRAICA;El perímetro de un rectángulo es 24 cm. Si su largo es el doble de su ancho ($a$), ¿cuál ecuación representa esta situación?;$2a + 2(2a) = 24$;$a + 2a = 24$;$2(a + 2a) = 24$;$a \cdot 2a = 24$;C;;;"Clave revisada: la tabla de especificaciones da C, pero la opción A (2a + 2(2a) = 24) también modela bien el problema. Se mantiene C; pendiente que la autora del instrumento cambie una de las dos opciones."
+9;LOGICA;Si todos los ingenieros estudian matemáticas y Juan estudia ingeniería, entonces:;Juan no estudia matemáticas;Juan estudia matemáticas;No se puede determinar;Juan estudia física;B;;;
+10;LOGICA;¿Cuál número continúa la secuencia $2, 4, 8, 16, \ldots$?;$18$;$24$;$32$;$30$;C;;;
+11;LOGICA;Si 3 máquinas producen 6 piezas en 1 hora, ¿cuántas piezas producen 6 máquinas en 1 hora?;6;9;12;18;C;;;
+12;LOGICA;Si hoy es lunes, ¿qué día será en 10 días?;Miércoles;Jueves;Viernes;Sábado;B;;;
+13;LOGICA;Si $A > B$ y $B > C$, entonces:;$A < C$;$A = C$;$A > C$;No se puede determinar;C;;;
+14;LOGICA;En una clase hay 20 estudiantes y el 60 % son mujeres. ¿Cuántas mujeres hay?;10;12;14;8;B;;;
+15;LOGICA;Un auto recorre 120 km en 2 horas. Su velocidad es:;50 km/h;60 km/h;70 km/h;80 km/h;B;;;Según el cap. 3 del informe, tiene efecto techo (la gran mayoría lo acierta), así que discrimina poco. Se conserva sin cambios en la v2.0.
+16;LOGICA;Si una proposición es verdadera y su negación es falsa, entonces:;Es una contradicción;Es una tautología;Cumple el principio de no contradicción;Es una falacia;C;;;
+17;FUNCIONAL;Observa la gráfica de las funciones A y B. ¿Cuál de las siguientes afirmaciones es VERDADERA en el intervalo $x \in (-1, 0)$?;La función A y la función B son decrecientes;La función B crece y la función A decrece;La función A y la función B son crecientes;La función A crece y la función B decrece;C;/img/diagnostico/item-17.png;Gráfica de dos funciones. A es una recta creciente que corta el eje y en 1. B es una parábola que abre hacia abajo, con vértice en (0, 1), y corta el eje x en -1 y en 1.;Clave revisada contra la gráfica: en (-1, 0) la recta A y la parábola B crecen, por lo tanto C. Se usa 'intervalo' en vez de 'dominio' en el enunciado.
+18;FUNCIONAL;La gráfica muestra la relación entre la velocidad de un coche y el tiempo que tarda en hacer un viaje. La relación descrita por la función C es:;Directamente proporcional;Inversamente proporcional;Lineal creciente;Constante;B;/img/diagnostico/item-18.png;"Gráfica de la curva C con la velocidad v en el eje vertical y el tiempo t en el eje horizontal: v disminuye a medida que t aumenta; pasa por los puntos (1, 1) y (2, 0.5).";Redacción ajustada para que se lea bien: 'La relación descrita por la función C es:'.
+19;FUNCIONAL;Para la función representada en la gráfica, ¿cuál es su dominio (valores de $x$ que puede tomar)?;Todos los números reales;$x \in (-\infty, -2) \cup (-2, 2) \cup (2, +\infty)$;Solo los números $-2$ y $2$;Solo $x > -2$ y $x > 2$;B;/img/diagnostico/item-19.png;Gráfica de la función constante f(x) = 2: una recta horizontal a la altura 2, con círculos vacíos (puntos excluidos) en x = -2 y en x = 2.;
+20;FUNCIONAL;Si $f(x) = 3x$ y $x$ aumenta, entonces:;$f(x)$ disminuye;$f(x)$ aumenta;$f(x)$ es constante;$f(x)$ cambia aleatoriamente;B;;;
+21;FUNCIONAL;Si el precio de un producto sube y la demanda baja, la relación es:;Directa;Inversa;Constante;Nula;B;;;
+22;FUNCIONAL;La pendiente positiva de una recta indica que:;La función decrece;La función aumenta;Es constante;Es vertical;B;;;Redacción ajustada: 'La pendiente positiva de una recta indica que:'.
+23;FUNCIONAL;Si una gráfica cruza el eje $Y$ en 5, significa que:;La pendiente es 5;El intercepto es 5;El dominio es 5;El rango es 5;B;;;
+24;FUNCIONAL;Si el área de un cuadrado depende del lado $L$, la expresión correcta es:;$L + L$;$2L$;$L^2$;$L^3$;C;;;

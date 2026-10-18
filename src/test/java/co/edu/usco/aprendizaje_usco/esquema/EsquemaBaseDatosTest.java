@@ -62,7 +62,9 @@ public class EsquemaBaseDatosTest {
 
         assertThat(scripts).containsExactly(
                 "V1__esquema_inicial.sql",
-                "V2__datos_base_roles_competencias.sql");
+                "V2__datos_base_roles_competencias.sql",
+                "V3__esquema_diagnostico.sql",
+                "V4__datos_prueba_diagnostica.sql");
     }
 
     @Test
