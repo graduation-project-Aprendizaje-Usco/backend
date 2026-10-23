@@ -64,7 +64,9 @@ public class EsquemaBaseDatosTest {
                 "V1__esquema_inicial.sql",
                 "V2__datos_base_roles_competencias.sql",
                 "V3__esquema_diagnostico.sql",
-                "V4__datos_prueba_diagnostica.sql");
+                "V4__datos_prueba_diagnostica.sql",
+                "V202610221000__esquema_practica.sql",
+                "V202610221010__datos_ejercicios_semilla.sql");
     }
 
     @Test
