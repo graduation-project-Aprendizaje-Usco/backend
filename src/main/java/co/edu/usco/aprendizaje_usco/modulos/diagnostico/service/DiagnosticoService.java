@@ -8,6 +8,7 @@ import co.edu.usco.aprendizaje_usco.common.exception.ReglaNegocioException;
 import co.edu.usco.aprendizaje_usco.modulos.contenido.model.Competencia;
 import co.edu.usco.aprendizaje_usco.modulos.diagnostico.config.UmbralesDiagnostico;
 import co.edu.usco.aprendizaje_usco.modulos.diagnostico.dto.DimensionResponse;
+import co.edu.usco.aprendizaje_usco.modulos.diagnostico.event.DiagnosticoFinalizadoEvent;
 import co.edu.usco.aprendizaje_usco.modulos.diagnostico.dto.IntentoResponse;
 import co.edu.usco.aprendizaje_usco.modulos.diagnostico.dto.ItemDiagnosticoResponse;
 import co.edu.usco.aprendizaje_usco.modulos.diagnostico.dto.OpcionResponse;
@@ -41,6 +42,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,6 +72,7 @@ public class DiagnosticoService {
     private final Clock clock;
     private final Duration gracia;
     private final UmbralesDiagnostico umbrales;
+    private final ApplicationEventPublisher eventPublisher;
 
     public DiagnosticoService(PruebaDiagnosticaRepository pruebaRepository,
                               ItemRepository itemRepository,
@@ -78,6 +81,7 @@ public class DiagnosticoService {
                               ResultadoDimensionRepository resultadoRepository,
                               Clock clock,
                               UmbralesDiagnostico umbrales,
+                              ApplicationEventPublisher eventPublisher,
                               @Value("${app.diagnostico.gracia-segundos:5}") long graciaSegundos) {
         this.pruebaRepository = pruebaRepository;
         this.itemRepository = itemRepository;
@@ -87,6 +91,7 @@ public class DiagnosticoService {
         this.clock = clock;
         this.gracia = Duration.ofSeconds(graciaSegundos);
         this.umbrales = umbrales;
+        this.eventPublisher = eventPublisher;
     }
 
     /** Resultado de iniciar: el intento y si se acaba de crear (201) o ya existía (200). */
@@ -255,6 +260,13 @@ public class DiagnosticoService {
         }
         intento.finalizar(resultado.puntaje(), resultado.categoria(), ahora(), porTiempo);
         intentoRepository.save(intento);
+
+        eventPublisher.publishEvent(new DiagnosticoFinalizadoEvent(
+                intento.getUsuario().getId(), intento.getId(),
+                resultado.dimensiones().stream()
+                        .map(d -> new DiagnosticoFinalizadoEvent.ResultadoDimensionSnapshot(
+                                d.competenciaId(), d.nivel(), d.porcentaje()))
+                        .toList()));
     }
 
     // ------------------------------------------------------------------ armado de la respuesta

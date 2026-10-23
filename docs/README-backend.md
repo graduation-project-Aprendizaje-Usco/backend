@@ -83,6 +83,15 @@ Propiedades de la prueba diagnóstica (en `application.properties`, no son secre
 | `app.diagnostico.umbrales.global.*` | Cortes de la categoría global: `escala`, `maximo-alto-riesgo`, `maximo-riesgo-moderado`. Si no son coherentes, la app no arranca | `24`, `9`, `16` |
 | `app.diagnostico.umbrales.dimension.*` | Cortes del nivel por competencia (mismas tres propiedades) | `8`, `3`, `6` |
 
+Propiedades de la práctica adaptativa:
+
+| Propiedad | Descripción | Valor |
+|---|---|---|
+| `app.practica.asignaturas` | Códigos de asignatura aceptados por el motor | `CALCULO_DIFERENCIAL,CALCULO_INTEGRAL` |
+| `app.practica.niveles.aciertos-para-subir` | Aciertos consecutivos para subir de nivel | `3` |
+| `app.practica.niveles.errores-para-bajar` | Errores consecutivos para bajar de nivel | `3` |
+| `app.practica.niveles.nivel-inicial-sin-diagnostico` | Nivel cuando no hay diagnóstico | `1` |
+
 ## 5. Estructura
 
 Organización **por módulo funcional**, con capas dentro de cada módulo (RNF-08). Cada integrante trabaja principalmente en su módulo, lo que reduce los conflictos de merge.
@@ -275,3 +284,54 @@ Reglas:
 - El banco de ítems revisable está en `docs/datos/items_diagnostico.csv` (separado por `;`, abre en Excel), con observaciones por ítem. `EsquemaDiagnosticoTest` verifica que la migración y el CSV digan lo mismo: si corriges un ítem, cambia los dos.
 - Para cambiar el instrumento: una migración nueva que inserte otra `prueba_diagnostica` con `activa = TRUE` y desactive la anterior (solo puede haber una activa). Nunca editar `V4`.
 - Las gráficas de los ítems 17 a 19 están en el frontend (`public/img/diagnostico/`); la base solo guarda la ruta y el texto alternativo.
+
+## 13. Práctica adaptativa (API)
+
+Solo para `ESTUDIANTE`. El estudiante se toma del token; la API nunca recibe un `usuarioId`.
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/practica/siguiente?asignatura=...` | Selecciona el siguiente ejercicio de la asignatura. `asignatura` es obligatoria y validada (`CALCULO_DIFERENCIAL` o `CALCULO_INTEGRAL`) | 200 · 400 (asignatura ausente o inválida) · 403 · 404 (sin ejercicios) |
+| `POST /api/practica/intentos` | Registra una respuesta y devuelve el resultado con retroalimentación | 201 (nuevo) · 200 (idempotente) · 400 · 403 · 404 · 409 · 422 |
+
+Cuerpo del intento:
+
+```json
+{
+  "ejercicioId": 1,
+  "opcionId": 1,
+  "tiempoSeg": 45,
+  "pistaUsada": false,
+  "claveIdempotencia": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+Para un ejercicio `NUMERICA` se envía `respuestaNumerica` en lugar de `opcionId`.
+
+Reglas:
+
+- El servidor deriva `numeroIntento`; no lo envía el cliente.
+- Solo el primer intento actualiza la racha y el nivel.
+- El segundo intento es pedagógico y no cuenta como dominio.
+- Un primer fallo devuelve pista y error común; el segundo fallo devuelve la explicación completa.
+- La respuesta de `siguiente` nunca incluye `esCorrecta`, `respuestaNumerica` ni `explicacion`.
+
+El contrato completo, las reglas del motor, los niveles, las pruebas manuales y el registro de archivos están en `docs/code/motor-practica-adaptativa.md`.
+
+### Banco semilla
+
+- 90 ejercicios: 45 de `CALCULO_DIFERENCIAL` y 45 de `CALCULO_INTEGRAL`.
+- 5 por asignatura × competencia × nivel.
+- Fuente: `docs/datos/ejercicios_practica.csv`.
+- Migración: `V202610221010__datos_ejercicios_semilla.sql`.
+- Los contenidos docentes nuevos se crean por la aplicación; no se agregan a Flyway.
+- La administración docente es la historia #132 y no forma parte de las tareas 82, 87, 90 y 95.
+
+### Niveles
+
+- Nivel inicial: 1 sin diagnóstico; BAJO → 1, MEDIO → 2, ALTO → 3.
+- N=3 y M=3 configurables.
+- Inicialización por evento después de finalizar el diagnóstico, con respaldo perezoso.
+- El historial de cambios vive en `historial_nivel`.
+
+Ver `docs/code/motor-practica-adaptativa.md`.

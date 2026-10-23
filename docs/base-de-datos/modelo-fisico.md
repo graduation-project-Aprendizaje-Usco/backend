@@ -8,6 +8,8 @@ Migraciones (`src/main/resources/db/migration/`):
 | `V2__datos_base_roles_competencias.sql` | Los 3 roles y las 3 competencias |
 | `V3__esquema_diagnostico.sql` | Tablas de la prueba diagnóstica (ver [Prueba diagnóstica](#prueba-diagnóstica)) |
 | `V4__datos_prueba_diagnostica.sql` | La prueba v2.0 activa (36 min), sus 24 ítems y 96 opciones con su clave |
+| `V202610221000__esquema_practica.sql` | Contenidos, ejercicios, opciones, intentos, niveles e historial de nivel |
+| `V202610221010__datos_ejercicios_semilla.sql` | 90 ejercicios semilla: 45 de Cálculo Diferencial y 45 de Cálculo Integral |
 
 Motor: PostgreSQL 17. Convención: tablas y columnas en `snake_case` singular; restricciones `pk_`, `fk_`, `uq_`, `ck_`; índices `ix_`.
 
@@ -177,4 +179,118 @@ Se guarda al finalizar (no se recalcula al consultar): así el resultado histór
 - `usuario.nombre` se divide en `nombres` y `apellidos`; se agregan `password_hash`, `programa_academico`, `creado_en` y `actualizado_en`.
 - `competencia` gana `codigo` (identificador estable para el código y los reportes).
 - `diagnostico`, `intento` y `resultado` del modelo conceptual quedan como `prueba_diagnostica` + `item` + `opcion`, `intento_diagnostico` + `respuesta_diagnostico` y `resultado_dimension` (el puntaje global vive en el intento).
-- Pendiente en tareas posteriores: `contenido`, `ejercicio`, `progreso` y la tabla `grupo` (asociación docente–estudiante, que no estaba en la Figura 6).
+- `contenido` y `ejercicio` se incorporan en la migración de práctica.
+- Pendiente en tareas posteriores: `progreso` y la tabla `grupo` (asociación docente–estudiante, que no estaba en la Figura 6).
+
+## Práctica adaptativa
+
+```mermaid
+erDiagram
+    COMPETENCIA ||--o{ CONTENIDO : "agrupa"
+    CONTENIDO ||--o{ EJERCICIO : "contiene"
+    EJERCICIO ||--o{ OPCION_EJERCICIO : "tiene"
+    USUARIO ||--o{ INTENTO_PRACTICA : "realiza"
+    EJERCICIO ||--o{ INTENTO_PRACTICA : "se responde"
+    USUARIO ||--o{ NIVEL_ESTUDIANTE : "alcanza"
+    COMPETENCIA ||--o{ NIVEL_ESTUDIANTE : "por competencia"
+    USUARIO ||--o{ HISTORIAL_NIVEL : "evoluciona"
+    INTENTO_PRACTICA ||--o{ HISTORIAL_NIVEL : "origina"
+```
+
+### contenido
+
+| Columna | Tipo | Nulo | Restricciones |
+|---|---|---|---|
+| id | BIGINT IDENTITY | No | `pk_contenido` |
+| competencia_id | BIGINT | No | FK → competencia |
+| asignatura | VARCHAR(80) | No | `CALCULO_DIFERENCIAL` o `CALCULO_INTEGRAL` |
+| tema | VARCHAR(120) | No | Texto normalizado; puede crecer sin cambio de esquema |
+| titulo | VARCHAR(150) | No | `uq_contenido_titulo (asignatura, tema, titulo)` |
+| descripcion | VARCHAR(500) | Sí | — |
+| activo | BOOLEAN | No | Default TRUE |
+| creado_por | BIGINT | Sí | FK → usuario; NULL en la semilla |
+| creado_en / actualizado_en | TIMESTAMPTZ | No | Auditoría |
+
+### ejercicio
+
+| Columna | Tipo | Nulo | Restricciones |
+|---|---|---|---|
+| id | BIGINT IDENTITY | No | `pk_ejercicio` |
+| contenido_id | BIGINT | No | FK compuesta con competencia |
+| competencia_id | BIGINT | No | `fk_ejercicio_contenido_competencia` |
+| codigo | VARCHAR(40) | No | `uq_ejercicio_codigo` |
+| nivel | SMALLINT | No | CHECK 1–3 |
+| tipo | VARCHAR(20) | No | `OPCION_MULTIPLE` o `NUMERICA` |
+| enunciado | VARCHAR(2000) | No | Texto con LaTeX |
+| respuesta_numerica | NUMERIC(20,6) | Sí | Solo tipo numérico |
+| tolerancia | NUMERIC(20,6) | Sí | Solo tipo numérico; `> 0` |
+| pista / explicacion | VARCHAR(1000/2000) | No | Retroalimentación |
+| error_comun | VARCHAR(1000) | Sí | — |
+| activo | BOOLEAN | No | Default TRUE |
+| creado_por / actualizado_por | BIGINT | Sí | FK → usuario |
+| creado_en / actualizado_en | TIMESTAMPTZ | No | Auditoría |
+
+La FK compuesta `(contenido_id, competencia_id)` impide que un ejercicio quede en una competencia distinta a la de su contenido.
+
+### opcion_ejercicio
+
+| Columna | Tipo | Nulo | Restricciones |
+|---|---|---|---|
+| id | BIGINT IDENTITY | No | PK; `uq_opcion_ejercicio_id_ejercicio` |
+| ejercicio_id | BIGINT | No | FK → ejercicio ON DELETE CASCADE |
+| letra | VARCHAR(1) | No | A–D; `uq_opcion_ejercicio_letra` |
+| texto | VARCHAR(500) | No | — |
+| es_correcta | BOOLEAN | No | Índice parcial único: una sola correcta por ejercicio |
+
+### intento_practica
+
+| Columna | Tipo | Nulo | Restricciones |
+|---|---|---|---|
+| id | BIGINT IDENTITY | No | PK |
+| usuario_id | BIGINT | No | FK → usuario |
+| ejercicio_id | BIGINT | No | FK → ejercicio |
+| competencia_id | BIGINT | No | Snapshot de competencia |
+| nivel_ejercicio | SMALLINT | No | Snapshot del nivel |
+| numero_intento | SMALLINT | No | 1 o 2 |
+| opcion_ejercicio_id | BIGINT | Sí | FK compuesta → opcion_ejercicio(id, ejercicio_id) |
+| respuesta_numerica | NUMERIC(20,6) | Sí | Solo una respuesta |
+| es_correcta | BOOLEAN | No | Resultado calculado |
+| tiempo_seg | INTEGER | No | 0–86400 |
+| pista_usada | BOOLEAN | No | Default FALSE |
+| clave_idempotencia | UUID | No | `uq_intento_practica_idempotencia (usuario_id, clave)` |
+| creado_en | TIMESTAMPTZ | No | Fecha del intento |
+
+Restricciones: `uq_intento_practica_numero (usuario_id, ejercicio_id, numero_intento)` y CHECK de exactamente una respuesta (opción o numérica).
+
+### nivel_estudiante
+
+| Columna | Tipo | Nulo | Restricciones |
+|---|---|---|---|
+| usuario_id | BIGINT | No | PK compuesta, FK → usuario |
+| competencia_id | BIGINT | No | PK compuesta, FK → competencia |
+| nivel | SMALLINT | No | CHECK 1–3 |
+| racha_aciertos | SMALLINT | No | `>= 0` |
+| racha_errores | SMALLINT | No | `>= 0` |
+| actualizado_en | TIMESTAMPTZ | No | Auditoría |
+
+### historial_nivel
+
+| Columna | Tipo | Nulo | Restricciones |
+|---|---|---|---|
+| id | BIGINT IDENTITY | No | PK |
+| usuario_id / competencia_id | BIGINT | No | FKs |
+| nivel_anterior / nivel_nuevo | SMALLINT | Sí / No | 1–3 |
+| motivo | VARCHAR(30) | No | `INICIALIZACION`, `DIAGNOSTICO`, `RACHA_ACIERTOS`, `RACHA_ERRORES`, `AJUSTE_MANUAL` |
+| intento_practica_id | BIGINT | Sí | FK → intento_practica |
+| intento_diagnostico_id | BIGINT | Sí | FK → intento_diagnostico |
+| creado_en | TIMESTAMPTZ | No | Auditoría |
+
+### Decisiones de práctica
+
+- La retroalimentación vive en `ejercicio`; no se crea una tabla de feedback en el MVP. Si luego se audita el feedback mostrado, se agrega una tabla o columna nullable.
+- La semilla tiene `creado_por = NULL`; los contenidos docentes lo llenan.
+- Un ejercicio con intentos no se borra: se desactiva. Los cambios estructurales se rechazan y se crea un ejercicio nuevo.
+- `intento_practica` conserva snapshots de competencia y nivel para no perder el historial si el ejercicio cambia.
+- Los intentos son inmutables.
+- Los nuevos ejercicios creados por docentes se insertan por la aplicación, no por Flyway.
+- Las materias se validan por configuración (`app.practica.asignaturas`); los temas son texto y no requieren tablas adicionales.
