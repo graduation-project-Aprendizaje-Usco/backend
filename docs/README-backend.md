@@ -335,3 +335,16 @@ El contrato completo, las reglas del motor, los niveles, las pruebas manuales y 
 - El historial de cambios vive en `historial_nivel`.
 
 Ver `docs/code/motor-practica-adaptativa.md`.
+
+## 14. Grupos académicos (API)
+
+Los grupos se gestionan con el docente autenticado como responsable; el servidor obtiene su identidad del `sub` del JWT y no acepta un identificador de docente desde el cliente. `ADMIN` puede consultar cualquier grupo e inscribir estudiantes, mientras cada docente solo puede consultar e inscribir en sus propios grupos. Los estudiantes no tienen acceso a estos endpoints.
+
+| Método y ruta | Qué hace | Roles | Respuestas |
+|---|---|---|---|
+| `POST /api/grupos` | Crea un grupo. Cuerpo: `{"codigo":"CALCULO-2026-1","nombre":"Cálculo Diferencial - Grupo 01"}` | `DOCENTE` | 201 · 400 · 401 · 403 · 409 |
+| `GET /api/grupos` | Lista los grupos propios; `ADMIN` lista todos | `DOCENTE`, `ADMIN` | 200 · 401 · 403 |
+| `GET /api/grupos/{grupoId}/estudiantes` | Consulta los estudiantes de un grupo autorizado | `DOCENTE` responsable, `ADMIN` | 200 · 401 · 403 (grupo ajeno) · 404 |
+| `POST /api/grupos/{grupoId}/estudiantes` | Inscribe por correo. Cuerpo: `{"correo":"u20201234567@usco.edu.co"}` | `DOCENTE` responsable, `ADMIN` | 201 · 400 · 401 · 403 · 404 · 409 · 422 |
+
+Los códigos se guardan en mayúsculas y son únicos. Solo pueden inscribirse cuentas activas con rol `ESTUDIANTE`; repetir una inscripción devuelve 409. Swagger describe las solicitudes, respuestas y restricciones de acceso en la configuración existente.

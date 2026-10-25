@@ -66,7 +66,8 @@ public class EsquemaBaseDatosTest {
                 "V3__esquema_diagnostico.sql",
                 "V4__datos_prueba_diagnostica.sql",
                 "V202610221000__esquema_practica.sql",
-                "V202610221010__datos_ejercicios_semilla.sql");
+                "V202610221010__datos_ejercicios_semilla.sql",
+                "V202610242250__crear_grupos_docentes_estudiantes.sql");
     }
 
     @Test

@@ -10,12 +10,16 @@ Migraciones (`src/main/resources/db/migration/`):
 | `V4__datos_prueba_diagnostica.sql` | La prueba v2.0 activa (36 min), sus 24 ítems y 96 opciones con su clave |
 | `V202610221000__esquema_practica.sql` | Contenidos, ejercicios, opciones, intentos, niveles e historial de nivel |
 | `V202610221010__datos_ejercicios_semilla.sql` | 90 ejercicios semilla: 45 de Cálculo Diferencial y 45 de Cálculo Integral |
+| `V202610242250__crear_grupos_docentes_estudiantes.sql` | Grupos académicos, docente responsable y asociaciones de estudiantes |
 
 Motor: PostgreSQL 17. Convención: tablas y columnas en `snake_case` singular; restricciones `pk_`, `fk_`, `uq_`, `ck_`; índices `ix_`.
 
 ```mermaid
 erDiagram
     ROL ||--o{ USUARIO : "tiene"
+    USUARIO ||--o{ GRUPO : "docente responsable"
+    GRUPO ||--o{ GRUPO_ESTUDIANTE : "incluye"
+    USUARIO ||--o{ GRUPO_ESTUDIANTE : "estudiante"
     ROL {
         bigint id PK
         varchar20 nombre UK "ESTUDIANTE | DOCENTE | ADMIN"
@@ -38,7 +42,28 @@ erDiagram
         varchar100 nombre
         varchar500 descripcion "NULL"
     }
+    GRUPO {
+        bigint id PK
+        varchar30 codigo UK
+        varchar100 nombre
+        bigint docente_id FK
+        timestamptz creado_en
+    }
+    GRUPO_ESTUDIANTE {
+        bigint grupo_id PK,FK
+        bigint estudiante_id PK,FK
+        timestamptz creado_en
+    }
 ```
+
+## grupo y grupo_estudiante
+
+| Tabla | Columnas y restricciones |
+|---|---|
+| `grupo` | `id` identidad; `codigo` único y en mayúsculas; `nombre`; `docente_id` → `usuario.id`; `creado_en` |
+| `grupo_estudiante` | Clave primaria compuesta (`grupo_id`, `estudiante_id`), con claves foráneas a `grupo` y `usuario`; `creado_en` |
+
+La aplicación valida que `docente_id` pertenezca a un usuario con rol `DOCENTE` y que `estudiante_id` corresponda a un estudiante activo. La clave primaria compuesta impide inscripciones duplicadas. Los índices `ix_grupo_docente_id` e `ix_grupo_estudiante_estudiante_id` permiten filtrar por responsable y localizar las asociaciones de un estudiante. Las operaciones de docentes verifican que el responsable autenticado coincida con el grupo.
 
 ## rol
 
@@ -180,7 +205,7 @@ Se guarda al finalizar (no se recalcula al consultar): así el resultado histór
 - `competencia` gana `codigo` (identificador estable para el código y los reportes).
 - `diagnostico`, `intento` y `resultado` del modelo conceptual quedan como `prueba_diagnostica` + `item` + `opcion`, `intento_diagnostico` + `respuesta_diagnostico` y `resultado_dimension` (el puntaje global vive en el intento).
 - `contenido` y `ejercicio` se incorporan en la migración de práctica.
-- Pendiente en tareas posteriores: `progreso` y la tabla `grupo` (asociación docente–estudiante, que no estaba en la Figura 6).
+- Pendiente en tareas posteriores: `progreso`.
 
 ## Práctica adaptativa
 
