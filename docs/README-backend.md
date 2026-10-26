@@ -10,6 +10,7 @@ API REST de **Aprendizaje USCO**, plataforma web de diagnóstico, práctica adap
 | Frontend | [aprendizaje-usco-frontend](https://github.com/aprendizaje-usco-project/aprendizaje-usco-frontend) |
 | Tablero | Jira, proyecto `AU` |
 | Convenciones | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Qué se ha implementado | [implementacion.md](implementacion.md) (historia por historia: qué hace, decisiones, cómo probarlo) |
 
 ---
 
