@@ -37,6 +37,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -78,6 +79,9 @@ class DiagnosticoControllerTest {
 
     @Autowired
     private UmbralesDiagnostico umbrales;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     private String tokenAna;
     private String tokenBeto;
@@ -404,6 +408,44 @@ class DiagnosticoControllerTest {
     void sinTokenDa401() throws Exception {
         mockMvc.perform(post(BASE)).andExpect(status().isUnauthorized());
         mockMvc.perform(get(BASE + "/actual")).andExpect(status().isUnauthorized());
+    }
+
+    // ------------------------------------------------------------ flujo completo (SCRUM-143)
+
+    @Test
+    void flujoCompletoDesdeElLoginHastaElResultado() throws Exception {
+        // Token obtenido con el login real (correo + contraseña), no emitido a mano.
+        usuarioRepository.save(new Usuario("Carla", "Prueba", "u20261000003@usco.edu.co",
+                passwordEncoder.encode("Clave2026*"), rolRepository.findByNombre(NombreRol.ESTUDIANTE).orElseThrow()));
+        String login = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"correo\": \"u20261000003@usco.edu.co\", \"password\": \"Clave2026*\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String token = "Bearer " + JsonPath.read(login, "$.token");
+
+        long id = idDeIniciar(token);
+        mockMvc.perform(get(BASE + "/actual").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id));
+
+        // 20 correctas (ítems 1 a 20) y 4 incorrectas (21 a 24).
+        for (var item : items.entrySet()) {
+            long opcion = item.getKey() <= 20 ? item.getValue()[1] : item.getValue()[2];
+            responder(token, id, item.getValue()[0], opcion).andExpect(status().isOk());
+        }
+        mockMvc.perform(get(BASE + "/" + id).header("Authorization", token))
+                .andExpect(jsonPath("$.totalRespondidas").value(24));
+
+        finalizar(token, id)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("FINALIZADO"));
+        mockMvc.perform(get(BASE + "/" + id + "/resultado").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.puntaje").value(20))
+                .andExpect(jsonPath("$.total").value(24))
+                .andExpect(jsonPath("$.categoria").value("NIVEL_ADECUADO"))
+                .andExpect(jsonPath("$.finalizadoPorTiempo").value(false))
+                .andExpect(jsonPath("$.dimensiones.length()").value(3));
     }
 
     // ------------------------------------------------------------ utilidades
