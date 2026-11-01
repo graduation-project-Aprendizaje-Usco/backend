@@ -323,7 +323,7 @@ El contrato completo, las reglas del motor, los niveles, las pruebas manuales y 
 - 90 ejercicios: 45 de `CALCULO_DIFERENCIAL` y 45 de `CALCULO_INTEGRAL`.
 - 5 por asignatura × competencia × nivel.
 - Fuente: `docs/datos/ejercicios_practica.csv`.
-- Migración: `V202610221010__datos_ejercicios_semilla.sql`.
+- Migración: `V6__datos_ejercicios_semilla.sql`.
 - Los contenidos docentes nuevos se crean por la aplicación; no se agregan a Flyway.
 - La administración docente es la historia #132 y no forma parte de las tareas 82, 87, 90 y 95.
 

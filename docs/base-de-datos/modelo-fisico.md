@@ -8,8 +8,8 @@ Migraciones (`src/main/resources/db/migration/`):
 | `V2__datos_base_roles_competencias.sql` | Los 3 roles y las 3 competencias |
 | `V3__esquema_diagnostico.sql` | Tablas de la prueba diagnóstica (ver [Prueba diagnóstica](#prueba-diagnóstica)) |
 | `V4__datos_prueba_diagnostica.sql` | La prueba v2.0 activa (36 min), sus 24 ítems y 96 opciones con su clave |
-| `V202610221000__esquema_practica.sql` | Contenidos, ejercicios, opciones, intentos, niveles e historial de nivel |
-| `V202610221010__datos_ejercicios_semilla.sql` | 90 ejercicios semilla: 45 de Cálculo Diferencial y 45 de Cálculo Integral |
+| `V5__esquema_practica.sql` | Contenidos, ejercicios, opciones, intentos, niveles e historial de nivel |
+| `V6__datos_ejercicios_semilla.sql` | 90 ejercicios semilla: 45 de Cálculo Diferencial y 45 de Cálculo Integral |
 
 Motor: PostgreSQL 17. Convención: tablas y columnas en `snake_case` singular; restricciones `pk_`, `fk_`, `uq_`, `ck_`; índices `ix_`.
 
