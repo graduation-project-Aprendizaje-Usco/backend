@@ -2,9 +2,9 @@
 
 **Proyecto:** Aprendizaje USCO  
 **Épica:** EPIC-3 — Práctica adaptativa y retroalimentación  
-**Tareas:** 82, 87, 90 y 95  
-**Rama de trabajo:** `feature/motor-practica-adaptativa`  
-**Fecha de implementación:** octubre de 2026
+**Tareas:** 82, 87, 90, 95, 110 y 114
+**Ramas de trabajo:** `feature/motor-practica-adaptativa` y `feature/practica-retroalimentacion-idempotencia`
+**Fecha de implementación:** octubre–noviembre de 2026
 
 Este documento reúne en un solo lugar el contexto técnico, las decisiones de diseño, los archivos creados o modificados, los contratos API, las reglas del motor, las pruebas y el estado de la implementación. Su objetivo es que cualquier integrante o evaluador pueda revisar qué se hizo y dónde encontrarlo.
 
@@ -20,10 +20,12 @@ Se implementó el módulo backend de práctica adaptativa sobre la base existent
 | **87 — Modelo de datos** | Migraciones, entidades, repositorios y restricciones para contenido, ejercicio, opciones, intentos, niveles e historial |
 | **90 — Motor adaptativo** | Servicio determinista y endpoint `GET /api/practica/siguiente`, con filtro obligatorio por asignatura |
 | **95 — Niveles** | Nivel inicial desde diagnóstico, reglas N=3/M=3, límites 1–3, evento de inicialización y respaldo lazy |
+| **110 — Retroalimentación** | Pista, explicación y error común en la misma respuesta del intento; panel accesible en el frontend |
+| **114 — Trazabilidad** | Registro transaccional de estudiante, ejercicio, resultado, fecha y tiempo; idempotencia también bajo envíos simultáneos |
 
 También se implementó el registro de intentos y la retroalimentación inmediata necesarios para que el motor y los niveles funcionen de punta a punta. El CRUD docente de #132/#133/#134 **no** se implementó en esta fase; el modelo queda preparado para esas historias.
 
-**Estado de validación:** `.\mvnw.cmd verify` termina en `BUILD SUCCESS` con **199 pruebas, 0 fallos y 0 errores**. Requiere Docker Desktop para Testcontainers.
+**Estado de validación:** `.\mvnw.cmd verify` termina en `BUILD SUCCESS` con **216 pruebas, 0 fallos y 0 errores**. Requiere Docker Desktop para Testcontainers.
 
 ---
 
@@ -33,7 +35,7 @@ También se implementó el registro de intentos y la retroalimentación inmediat
 - Persistencia: PostgreSQL 17, Spring Data JPA, Flyway, `ddl-auto=validate`.
 - Seguridad: Spring Security, JWT HS256, `@PreAuthorize` por rol.
 - Pruebas: JUnit 5, MockMvc, Testcontainers, AssertJ, Mockito.
-- Frontend: React 19, Vite, MUI, Axios, KaTeX. **No se modificó el frontend en estas tareas.**
+- Frontend: React 19, Vite, MUI, Axios, KaTeX. Las tareas 110/114 incluyen el panel de retroalimentación y sus pruebas en el repositorio frontend; el detalle está en `docs/implementacion.md` de ese repositorio.
 - Organización backend por módulos funcionales y capas `controller/service/repository/dto/model`.
 
 La documentación existente del proyecto sigue siendo la referencia para autenticación, diagnóstico y convenciones generales:
@@ -42,6 +44,7 @@ La documentación existente del proyecto sigue siendo la referencia para autenti
 - `docs/CONTRIBUTING.md`
 - `docs/base-de-datos/modelo-fisico.md`
 - `docs/tareas-y-responsables.md`
+- `docs/code/retroalimentacion-e-idempotencia.md` — detalle de las tareas 110 y 114
 
 ---
 
@@ -185,6 +188,8 @@ Restricciones adicionales:
 - Exactamente una respuesta: opción o valor numérico.
 - La opción debe pertenecer al ejercicio mediante FK compuesta.
 - `UNIQUE (usuario_id, ejercicio_id, numero_intento)`.
+- `UNIQUE (usuario_id, clave_idempotencia)`. El servicio bloquea la fila del usuario antes de comprobar la clave, de modo que los envíos simultáneos se serializan y el segundo recibe el mismo intento.
+- Cada intento conserva los cinco datos de CA-08: estudiante, ejercicio, resultado, fecha (`creado_en`) y tiempo (`tiempo_seg`).
 - No se borran intentos.
 - No se guarda el texto de la retroalimentación en el intento; el MVP la deriva del ejercicio.
 
@@ -568,12 +573,14 @@ Propiedades del diagnóstico existentes:
 | `AsignaturaValidatorTest` | Asignatura válida, ausente y desconocida |
 | `NivelEstudianteServiceTest` | Nivel por defecto, diagnóstico, idempotencia y umbrales |
 | `EsquemaPracticaTest` | Migraciones, 90 semilla, restricciones, CSV/base y contenido dinámico |
-| `PracticaControllerTest` | Endpoints, roles, respuestas, idempotencia y feedback |
+| `PracticaControllerTest` | Endpoints, roles, respuestas, idempotencia, feedback, segundo fallo y cinco datos de trazabilidad |
+| `PracticaIdempotenciaConcurrenteTest` | Ocho envíos simultáneos con la misma clave crean un solo intento |
+| `PracticaTransaccionTest` | Si falla la actualización de nivel, el intento se revierte |
 
 ### 10.2 Resultado
 
 ```text
-.\mvnw.cmd test    -> 199 pruebas, 0 fallos, 0 errores
+.\mvnw.cmd test    -> 216 pruebas, 0 fallos, 0 errores
 .\mvnw.cmd verify  -> BUILD SUCCESS
 ```
 
@@ -607,9 +614,9 @@ Testcontainers levanta PostgreSQL 17. Docker Desktop debe estar iniciado.
 - El motor no usa IA ni aprendizaje automático.
 - El feedback no se audita por intento en el MVP; se puede añadir después.
 - No se implementó la integración con grupos académicos; la asignatura se recibe por parámetro.
-- No se modificó el frontend. La interfaz de práctica es la historia #104.
+- La interfaz de práctica vive en el frontend (#104) y el panel de retroalimentación en #110/#114; este documento cubre el backend.
 - La semilla debe revisarse pedagógicamente con un docente antes de considerarse contenido definitivo.
-- Los cambios están en la rama `feature/motor-practica-adaptativa` y **no fueron commiteados** por el agente.
+- El motor inicial se integró en `develop`; la serialización de envíos y las pruebas de trazabilidad de #114 están en `feature/practica-retroalimentacion-idempotencia`.
 
 ---
 
