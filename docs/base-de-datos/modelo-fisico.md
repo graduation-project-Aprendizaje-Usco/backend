@@ -10,8 +10,221 @@ Migraciones (`src/main/resources/db/migration/`):
 | `V4__datos_prueba_diagnostica.sql` | La prueba v2.0 activa (36 min), sus 24 ítems y 96 opciones con su clave |
 | `V5__esquema_practica.sql` | Contenidos, ejercicios, opciones, intentos, niveles e historial de nivel |
 | `V6__datos_ejercicios_semilla.sql` | 90 ejercicios semilla: 45 de Cálculo Diferencial y 45 de Cálculo Integral |
+| `V7__crear_grupos_docentes_estudiantes.sql` | Tablas `grupo` y `grupo_estudiante` (antes `V202610242250__…`; se renombró para la numeración consecutiva) |
+| `db/dev-data/R__usuarios_de_prueba.sql` | Usuarios de prueba; solo con el perfil `dev` |
 
 Motor: PostgreSQL 17. Convención: tablas y columnas en `snake_case` singular; restricciones `pk_`, `fk_`, `uq_`, `ck_`; índices `ix_`.
+
+## Diagrama completo (as-built)
+
+Las 17 tablas y sus 30 relaciones.
+
+**De dónde sale.** Se generó el 1 de noviembre de 2026 a partir de la base real, con todas las migraciones aplicadas, consultando `information_schema` y `pg_constraint`. Si una migración nueva cambia el esquema, actualiza este diagrama en el mismo PR.
+
+**Cómo leerlo.**
+- Cada relación lleva el nombre de la columna de la clave foránea.
+- `||` indica una relación obligatoria y `o|` una opcional.
+- `UK` marca las columnas únicas por sí solas.
+
+```mermaid
+erDiagram
+    rol ||--o{ usuario : "rol_id"
+    competencia ||--o{ item : "competencia_id"
+    prueba_diagnostica ||--o{ item : "prueba_id"
+    item ||--o{ opcion : "item_id"
+    usuario ||--o{ intento_diagnostico : "usuario_id"
+    prueba_diagnostica ||--o{ intento_diagnostico : "prueba_id"
+    item ||--o{ respuesta_diagnostico : "item_id"
+    opcion ||--o{ respuesta_diagnostico : "item_id, opcion_id"
+    intento_diagnostico ||--o{ respuesta_diagnostico : "intento_id"
+    competencia ||--o{ resultado_dimension : "competencia_id"
+    intento_diagnostico ||--o{ resultado_dimension : "intento_id"
+    usuario o|--o{ contenido : "creado_por"
+    competencia ||--o{ contenido : "competencia_id"
+    usuario o|--o{ ejercicio : "actualizado_por"
+    usuario o|--o{ ejercicio : "creado_por"
+    contenido ||--o{ ejercicio : "contenido_id, competencia_id"
+    ejercicio ||--o{ opcion_ejercicio : "ejercicio_id"
+    usuario ||--o{ intento_practica : "usuario_id"
+    competencia ||--o{ intento_practica : "competencia_id"
+    ejercicio ||--o{ intento_practica : "ejercicio_id"
+    opcion_ejercicio o|--o{ intento_practica : "ejercicio_id, opcion_ejercicio_id"
+    usuario ||--o{ nivel_estudiante : "usuario_id"
+    competencia ||--o{ nivel_estudiante : "competencia_id"
+    usuario ||--o{ historial_nivel : "usuario_id"
+    competencia ||--o{ historial_nivel : "competencia_id"
+    intento_diagnostico o|--o{ historial_nivel : "intento_diagnostico_id"
+    intento_practica o|--o{ historial_nivel : "intento_practica_id"
+    usuario ||--o{ grupo : "docente_id"
+    usuario ||--o{ grupo_estudiante : "estudiante_id"
+    grupo ||--o{ grupo_estudiante : "grupo_id"
+    competencia {
+        bigint id PK
+        varchar codigo UK
+        varchar nombre
+        varchar descripcion "opcional"
+    }
+    contenido {
+        bigint id PK
+        bigint competencia_id FK
+        varchar asignatura
+        varchar tema
+        varchar titulo
+        varchar descripcion "opcional"
+        boolean activo
+        bigint creado_por FK "opcional"
+        timestamptz creado_en
+        timestamptz actualizado_en
+    }
+    ejercicio {
+        bigint id PK
+        bigint contenido_id FK
+        bigint competencia_id FK
+        varchar codigo UK
+        smallint nivel
+        varchar tipo
+        varchar enunciado
+        numeric respuesta_numerica "opcional"
+        numeric tolerancia "opcional"
+        varchar pista
+        varchar explicacion
+        varchar error_comun "opcional"
+        boolean activo
+        bigint creado_por FK "opcional"
+        bigint actualizado_por FK "opcional"
+        timestamptz creado_en
+        timestamptz actualizado_en
+    }
+    grupo {
+        bigint id PK
+        varchar codigo UK
+        varchar nombre
+        bigint docente_id FK
+        timestamptz creado_en
+    }
+    grupo_estudiante {
+        bigint grupo_id PK, FK
+        bigint estudiante_id PK, FK
+        timestamptz creado_en
+    }
+    historial_nivel {
+        bigint id PK
+        bigint usuario_id FK
+        bigint competencia_id FK
+        smallint nivel_anterior "opcional"
+        smallint nivel_nuevo
+        varchar motivo
+        bigint intento_practica_id FK "opcional"
+        bigint intento_diagnostico_id FK "opcional"
+        timestamptz creado_en
+    }
+    intento_diagnostico {
+        bigint id PK
+        bigint usuario_id FK
+        bigint prueba_id FK
+        varchar estado
+        timestamptz iniciado_en
+        timestamptz finalizado_en "opcional"
+        boolean finalizado_por_tiempo
+        int puntaje_total "opcional"
+        varchar categoria "opcional"
+    }
+    intento_practica {
+        bigint id PK
+        bigint usuario_id FK
+        bigint ejercicio_id FK
+        bigint competencia_id FK
+        smallint nivel_ejercicio
+        smallint numero_intento
+        bigint opcion_ejercicio_id FK "opcional"
+        numeric respuesta_numerica "opcional"
+        boolean es_correcta
+        int tiempo_seg
+        boolean pista_usada
+        uuid clave_idempotencia
+        timestamptz creado_en
+    }
+    item {
+        bigint id PK
+        bigint prueba_id FK
+        int numero
+        varchar enunciado
+        bigint competencia_id FK
+        varchar imagen "opcional"
+        varchar imagen_alt "opcional"
+        boolean activo
+    }
+    nivel_estudiante {
+        bigint usuario_id PK, FK
+        bigint competencia_id PK, FK
+        smallint nivel
+        smallint racha_aciertos
+        smallint racha_errores
+        timestamptz actualizado_en
+    }
+    opcion {
+        bigint id PK
+        bigint item_id FK
+        varchar letra
+        varchar texto
+        boolean es_correcta
+    }
+    opcion_ejercicio {
+        bigint id PK
+        bigint ejercicio_id FK
+        varchar letra
+        varchar texto
+        boolean es_correcta
+    }
+    prueba_diagnostica {
+        bigint id PK
+        varchar nombre
+        varchar version
+        int tiempo_limite_min
+        boolean activa
+        timestamptz creado_en
+    }
+    respuesta_diagnostico {
+        bigint id PK
+        bigint intento_id FK
+        bigint item_id FK
+        bigint opcion_id FK
+        timestamptz respondida_en
+    }
+    resultado_dimension {
+        bigint id PK
+        bigint intento_id FK
+        bigint competencia_id FK
+        int aciertos
+        int total
+        numeric porcentaje
+        varchar nivel
+    }
+    rol {
+        bigint id PK
+        varchar nombre UK
+    }
+    usuario {
+        bigint id PK
+        varchar nombres
+        varchar apellidos
+        varchar correo UK
+        varchar password_hash
+        bigint rol_id FK
+        varchar programa_academico "opcional"
+        varchar estado
+        timestamptz creado_en
+        timestamptz actualizado_en
+    }
+```
+
+**Reglas que el diagrama no muestra:**
+
+| Tipo | Regla |
+|---|---|
+| Únicos compuestos | `contenido` (asignatura, tema, titulo) · `intento_practica` (usuario_id, clave_idempotencia) y (usuario_id, ejercicio_id, numero_intento) · `item` (prueba_id, numero) · `opcion` (item_id, letra) · `opcion_ejercicio` (ejercicio_id, letra) · `prueba_diagnostica` (nombre, version) · `respuesta_diagnostico` (intento_id, item_id) · `resultado_dimension` (intento_id, competencia_id) |
+| Claves foráneas compuestas | `ejercicio` (contenido_id, competencia_id) → `contenido`: el ejercicio queda en la competencia de su contenido · `respuesta_diagnostico` (opcion_id, item_id) → `opcion`: la opción es de la misma pregunta · `intento_practica` (opcion_ejercicio_id, ejercicio_id) → `opcion_ejercicio` |
+| Índices únicos parciales | `uq_intento_en_curso`: un solo intento EN_CURSO por estudiante y prueba · `uq_opcion_una_correcta` y `uq_opcion_ejercicio_una_correcta`: una sola respuesta correcta · `uq_prueba_una_activa`: una sola prueba activa |
 
 ```mermaid
 erDiagram
@@ -204,7 +417,8 @@ Se guarda al finalizar (no se recalcula al consultar): así el resultado histór
 - `competencia` gana `codigo` (identificador estable para el código y los reportes).
 - `diagnostico`, `intento` y `resultado` del modelo conceptual quedan como `prueba_diagnostica` + `item` + `opcion`, `intento_diagnostico` + `respuesta_diagnostico` y `resultado_dimension` (el puntaje global vive en el intento).
 - `contenido` y `ejercicio` se incorporan en la migración de práctica.
-- Pendiente en tareas posteriores: `progreso`.
+- `progreso` no tiene tablas propias: el historial (SCRUM-41) consulta `intento_diagnostico`, `resultado_dimension` e `intento_practica`.
+- `grupo` y `grupo_estudiante` (SCRUM-159) no estaban en el modelo conceptual: permiten que el docente vea solo a los estudiantes de sus grupos.
 
 ## Práctica adaptativa
 

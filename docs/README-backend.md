@@ -8,9 +8,11 @@ API REST de **Aprendizaje USCO**, plataforma web de diagnóstico, práctica adap
 |---|---|
 | Stack | Java 21 · Spring Boot 4.1 · Spring Security (JWT) · Spring Data JPA · PostgreSQL 17 · Flyway |
 | Frontend | [aprendizaje-usco-frontend](https://github.com/aprendizaje-usco-project/aprendizaje-usco-frontend) |
-| Tablero | Jira, proyecto `AU` |
+| Tablero | Jira, proyecto `SCRUM` |
 | Convenciones | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Qué se ha implementado | [implementacion.md](implementacion.md) (historia por historia: qué hace, decisiones, cómo probarlo) |
+| Manual técnico | [manual-tecnico.md](manual-tecnico.md) (arquitectura, despliegue, instalación completa, endpoints, seguridad) |
+| Modelo de datos | [base-de-datos/modelo-fisico.md](base-de-datos/modelo-fisico.md) (diagrama completo, tablas y restricciones) |
 
 ---
 
@@ -43,6 +45,7 @@ Al arrancar con el perfil `dev`, Spring Boot levanta el contenedor de PostgreSQL
 |---|---|---|
 | Salud | http://localhost:8080/actuator/health | `{"status":"UP"}` |
 | Documentación de la API | http://localhost:8080/swagger-ui.html | Swagger UI |
+| pgAdmin (ver la base desde el navegador) | http://localhost:5050 | Ingreso con `PGADMIN_DEFAULT_EMAIL` y `PGADMIN_DEFAULT_PASSWORD` de tu `.env` |
 
 **Sin Docker:** instala PostgreSQL 17, crea la base `aprendizaje_usco` con usuario `usco` / `usco_dev` (puerto 5432, como en `.env.template`) y agrega la línea `spring.docker.compose.enabled=false` a tu `.env`. El `.env` nunca se sube al repositorio.
 
@@ -154,7 +157,7 @@ src/main/resources/db/dev-data/    datos de prueba (solo perfil dev)
 ## 7. Base de datos y migraciones
 
 - El esquema **solo** lo cambia Flyway; Hibernate está en `ddl-auto: validate`.
-- Las migraciones siguen la numeración consecutiva `V1`, `V2`, … `V7`. La siguiente es `V8__descripcion.sql`; no se salta ni se reutiliza un número.
+- Las migraciones siguen la numeración consecutiva `V1`, `V2`, … `V7`. La siguiente es `V8__descripcion.sql`; no se salta ni se reutiliza un número. Qué crea cada una y el diagrama completo: [modelo-fisico.md](base-de-datos/modelo-fisico.md).
 - **Nunca** edites ni renombres una migración que ya está en `develop`: si necesitas cambiar el esquema, crea la siguiente versión.
 - Datos que necesitan todos los entornos (roles, competencias, los 24 ítems del diagnóstico) van en migraciones versionadas de `db/migration`.
 - Datos de prueba que no deben llegar a producción (usuarios demo) van en `db/dev-data` como migración repetible `R__…sql`, que solo se carga con el perfil `dev`.
