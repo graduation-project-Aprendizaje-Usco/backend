@@ -98,14 +98,19 @@ public class PracticaService {
         if (request.claveIdempotencia() == null) {
             throw new SolicitudInvalidaException("La clave de idempotencia es obligatoria");
         }
+        Ejercicio ejercicio = ejercicioRepository.findActivoConOpciones(request.ejercicioId())
+                .orElseThrow(() -> new RecursoNoEncontradoException("El ejercicio no existe o no esta activo"));
+        validarTipoRespuesta(ejercicio, request);
+
+        // Los envíos del mismo estudiante se atienden en serie: así un doble clic o
+        // un reintento de red no compiten por la misma clave de idempotencia.
+        Usuario usuario = usuarioRepository.findParaBloquear(usuarioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("El usuario autenticado no existe"));
+
         IntentosPrevios previos = intentosPrevios(usuarioId, request);
         if (previos.existente() != null) {
             return new Registro(respuestaExistente(usuarioId, previos.existente()), false);
         }
-
-        Ejercicio ejercicio = ejercicioRepository.findActivoConOpciones(request.ejercicioId())
-                .orElseThrow(() -> new RecursoNoEncontradoException("El ejercicio no existe o no esta activo"));
-        validarTipoRespuesta(ejercicio, request);
 
         if (previos.numeroIntento() > 2) {
             throw new ConflictoException("El ejercicio ya tiene dos intentos registrados");
@@ -127,7 +132,6 @@ public class PracticaService {
             correcta = opcion.isEsCorrecta();
         }
 
-        Usuario usuario = usuarioRepository.getReferenceById(usuarioId);
         IntentoPractica intento = new IntentoPractica(usuario, ejercicio, previos.numeroIntento(),
                 opcion, respuestaNumerica, correcta,
                 request.tiempoSeg() == null ? 0 : request.tiempoSeg(),
