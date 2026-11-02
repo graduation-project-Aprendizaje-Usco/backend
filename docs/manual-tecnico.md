@@ -184,6 +184,7 @@ Las limitaciones conocidas, como la revocación de tokens o la falta de límite 
 | `docs/implementacion.md` (cada repo) | Lo construido historia por historia: decisiones, pruebas, cómo probarlo |
 | `docs/base-de-datos/modelo-fisico.md` | Modelo de datos final: diagrama completo, tablas, restricciones y decisiones |
 | `docs/code/motor-practica-adaptativa.md` | Diseño del motor de práctica adaptativa |
+| `docs/code/retroalimentacion-e-idempotencia.md` | Retroalimentación inmediata, trazabilidad e idempotencia de los intentos de práctica |
 | `docs/documentación física/` | Documento maestro, requisitos e historias de usuario, plan de pruebas |
 | `docs/tareas-y-responsables.md` | Qué pide cada tarea y quién la tiene |
 | `CONTRIBUTING.md` (cada repo) | Ramas, commits y PR |
