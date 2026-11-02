@@ -10,7 +10,7 @@ Migraciones (`src/main/resources/db/migration/`):
 | `V4__datos_prueba_diagnostica.sql` | La prueba v2.0 activa (36 min), sus 24 ítems y 96 opciones con su clave |
 | `V5__esquema_practica.sql` | Contenidos, ejercicios, opciones, intentos, niveles e historial de nivel |
 | `V6__datos_ejercicios_semilla.sql` | 90 ejercicios semilla: 45 de Cálculo Diferencial y 45 de Cálculo Integral |
-| `V202610242250__crear_grupos_docentes_estudiantes.sql` | Tablas `grupo` y `grupo_estudiante` |
+| `V7__crear_grupos_docentes_estudiantes.sql` | Tablas `grupo` y `grupo_estudiante` (antes `V202610242250__…`; se renombró para la numeración consecutiva) |
 | `db/dev-data/R__usuarios_de_prueba.sql` | Usuarios de prueba; solo con el perfil `dev` |
 
 Motor: PostgreSQL 17. Convención: tablas y columnas en `snake_case` singular; restricciones `pk_`, `fk_`, `uq_`, `ck_`; índices `ix_`.

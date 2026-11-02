@@ -157,8 +157,8 @@ src/main/resources/db/dev-data/    datos de prueba (solo perfil dev)
 ## 7. Base de datos y migraciones
 
 - El esquema **solo** lo cambia Flyway; Hibernate está en `ddl-auto: validate`.
-- Las migraciones base son `V1` a `V6` (esquema y datos de usuarios, diagnóstico y práctica). Las nuevas llevan fecha y hora en la versión para evitar choques entre ramas: `V202610011430__crear_tabla_intento.sql`. Qué crea cada una y el diagrama completo: [modelo-fisico.md](base-de-datos/modelo-fisico.md).
-- **Nunca** edites una migración que ya está en `develop`: crea una nueva.
+- Las migraciones siguen la numeración consecutiva `V1`, `V2`, … `V7`. La siguiente es `V8__descripcion.sql`; no se salta ni se reutiliza un número. Qué crea cada una y el diagrama completo: [modelo-fisico.md](base-de-datos/modelo-fisico.md).
+- **Nunca** edites ni renombres una migración que ya está en `develop`: si necesitas cambiar el esquema, crea la siguiente versión.
 - Datos que necesitan todos los entornos (roles, competencias, los 24 ítems del diagnóstico) van en migraciones versionadas de `db/migration`.
 - Datos de prueba que no deben llegar a producción (usuarios demo) van en `db/dev-data` como migración repetible `R__…sql`, que solo se carga con el perfil `dev`.
 
@@ -318,9 +318,11 @@ Reglas:
 - Solo el primer intento actualiza la racha y el nivel.
 - El segundo intento es pedagógico y no cuenta como dominio.
 - Un primer fallo devuelve pista y error común; el segundo fallo devuelve la explicación completa.
+- Cada intento guarda los cinco datos de trazabilidad de CA-08: estudiante, ejercicio, resultado, fecha y tiempo empleado (además de `pistaUsada` y la clave de idempotencia).
+- La clave de idempotencia es única por usuario. Antes de crearla se bloquea la fila del usuario, así que dos envíos simultáneos del mismo intento se atienden en serie: el primero responde 201 y los demás 200 con el mismo `intentoId`, sin duplicar registros.
 - La respuesta de `siguiente` nunca incluye `esCorrecta`, `respuestaNumerica` ni `explicacion`.
 
-El contrato completo, las reglas del motor, los niveles, las pruebas manuales y el registro de archivos están en `docs/code/motor-practica-adaptativa.md`.
+El contrato completo, las reglas del motor, los niveles, las pruebas manuales y el registro de archivos están en `docs/code/motor-practica-adaptativa.md`. La retroalimentación, la trazabilidad y la idempotencia se detallan en `docs/code/retroalimentacion-e-idempotencia.md`.
 
 ### Banco semilla
 
