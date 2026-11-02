@@ -191,6 +191,8 @@ Quién responde por cada parte del backend. El detalle tarea por tarea está en 
 | `Falta la variable de entorno JWT_SECRET` al arrancar | Arrancaste sin el perfil `dev` (ej. `java -jar`). Usa `./mvnw spring-boot:run` o define `JWT_SECRET` |
 | `Schema-validation: missing table` | Falta la migración de esa entidad, o la migración tiene otro nombre de columna |
 | `Validate failed: Migration checksum mismatch` | Se editó una migración ya aplicada. Revierte el cambio y crea una migración nueva |
+| `Detected applied migration not resolved locally` al arrancar | Tu base local aplicó migraciones con nombres que después cambiaron (pasó con las de práctica: `V202610221000…` → `V5`). Si solo tienes datos de prueba, borra la base local y deja que se cree de nuevo: `docker compose down` y luego borra la carpeta `postgres_data/` |
+| Las pruebas fallan con `relation "…" already exists` | Quedaron migraciones viejas compiladas en `target/`. Ejecuta `./mvnw clean test` |
 | 401 en todos los endpoints | Falta el header `Authorization`, o el token expiró |
 | Error de CORS desde el frontend | Revisa `CORS_ORIGINS` |
 

@@ -9,6 +9,7 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 | [Inicio de sesión con JWT](#1-inicio-de-sesión-con-jwt-scrum-16) | SCRUM-16 | Nicolás Pérez | En `develop` |
 | [Control de acceso por rol](#2-control-de-acceso-por-rol-scrum-12) | SCRUM-12 | Fernando Pérez (integración: Nicolás Pérez) | En `develop` |
 | [Pruebas del diagnóstico](#3-pruebas-del-módulo-de-diagnóstico-scrum-27) | SCRUM-27 | Nicolás Pérez | En `develop` (falta la evidencia manual) |
+| [Historial de resultados](#4-historial-de-resultados-scrum-41) | SCRUM-41 (168) | Nicolás Pérez | En `feature/historial` |
 | Aplicación de la prueba diagnóstica, puntaje y categoría | SCRUM-22, 23, 24 | Jorel Vargas | En `develop` · ver README §12 |
 | Motor de práctica adaptativa | SCRUM-28 a 31 | Juan David Polanco | En `develop` · ver README §13 |
 | Grupos docente–estudiante | SCRUM-159 | Fernando Pérez | En `develop` |
@@ -102,8 +103,50 @@ El reporte queda en `target/site/jacoco/index.html`.
 
 ---
 
+## 4. Historial de resultados (SCRUM-41)
+
+**Para qué.** Que el estudiante vea todo lo que ha hecho (diagnóstico y ejercicios de práctica) en una sola lista, y que el docente consulte el de los estudiantes de sus grupos (RF-15).
+
+**Endpoint:** `GET /api/historial` (roles ESTUDIANTE y DOCENTE), del más reciente al más antiguo, **20 por página**.
+
+| Parámetro | Para qué |
+|---|---|
+| `tipo` | `DIAGNOSTICO` o `PRACTICA` (opcional) |
+| `competencia` | `ALGEBRAICA`, `LOGICA` o `FUNCIONAL` (opcional) |
+| `desde`, `hasta` | `AAAA-MM-DD`, ambos días incluidos, en hora de Colombia (opcionales) |
+| `page` | Página desde 0 |
+| `estudianteId` | Obligatorio para el docente; el estudiante no lo necesita |
+
+Respuesta: `{ contenido, pagina, tamano, totalElementos, totalPaginas }`. Cada fila trae `tipo`, `id`, `fecha`, `actividad` y la competencia, más:
+
+- **DIAGNOSTICO:** `aciertos`, `total` y `categoria`. Con filtro de competencia, los aciertos de esa competencia (ej. 5 de 8).
+- **PRACTICA:** `correcto`, `nivel`, `tiempoSeg` y `pistaUsada`.
+
+| Caso | Respuesta |
+|---|---|
+| Estudiante pide su historial | 200 |
+| Estudiante pide el de otro (`estudianteId` ajeno) | 403 |
+| Docente con un estudiante de sus grupos | 200 |
+| Docente con un estudiante que no es de sus grupos | 403 |
+| Docente sin `estudianteId`, o `desde` posterior a `hasta` | 422 |
+| `tipo`, fecha o `page` con formato inválido | 400 |
+| Administrador o sin token | 403 / 401 |
+
+**Archivos:** `modulos/progreso/controller/HistorialController.java`, `service/HistorialService.java`, `repository/HistorialRepository.java`, `dto/HistorialItemResponse.java`, `dto/PaginaResponse.java`, `model/TipoActividad.java`.
+
+**Decisiones.**
+
+- **Consulta SQL con `UNION ALL`** sobre `intento_diagnostico` e `intento_practica`: son dos tablas que JPA no relaciona. Los filtros se agregan solo si llegan, y siempre como parámetros (nunca concatenados).
+- **Se apoya en tablas de otros módulos:** los intentos de práctica de Juan David (que ya guardan los datos de SCRUM-35) y los grupos de Fernando (SCRUM-159). Si cambian esas tablas, hay que ajustar `HistorialRepository`.
+- **Las fechas del filtro se interpretan en hora de Colombia** (`America/Bogota`).
+
+**Pruebas.** `HistorialControllerTest`: 11 pruebas (orden y contenido, aislamiento entre estudiantes, filtros por tipo, competencia y fechas, paginación de 20, permisos de estudiante, docente y administrador).
+
+**Cómo probarlo a mano.** Swagger → `GET /api/historial` con el token de un estudiante que haya presentado el diagnóstico o practicado. Para el docente, crear un grupo (`POST /api/grupos`), inscribir al estudiante (`POST /api/grupos/{id}/estudiantes` con su correo) y consultar con `estudianteId`.
+
+---
+
 ## Pendientes conocidos
 
 - **Staging (SCRUM-13):** sin él, la verificación manual y las pruebas con usuarios piloto se hacen en local.
 - **Indicadores de grupo (SCRUM-39):** los necesita el dashboard del docente (SCRUM-40).
-- **Registro de intentos de práctica (SCRUM-35):** lo necesita el historial (SCRUM-41).
