@@ -11,6 +11,7 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 | [Pruebas del diagnóstico](#3-pruebas-del-módulo-de-diagnóstico-scrum-27) | SCRUM-27 | Nicolás Pérez | En `develop` (falta la evidencia manual) |
 | Aplicación de la prueba diagnóstica, puntaje y categoría | SCRUM-22, 23, 24 | Jorel Vargas | En `develop` · ver README §12 |
 | Motor de práctica adaptativa | SCRUM-28 a 31 | Juan David Polanco | En `develop` · ver README §13 |
+| [Retroalimentación inmediata y registro de intentos](#4-retroalimentación-inmediata-y-registro-de-intentos-110-114) | 110, 114 | Juan David Polanco | En esta rama · ver README §13 |
 | Grupos docente–estudiante | SCRUM-159 | Fernando Pérez | En `develop` |
 
 ---
@@ -102,8 +103,40 @@ El reporte queda en `target/site/jacoco/index.html`.
 
 ---
 
+## 4. Retroalimentación inmediata y registro de intentos (110, 114)
+
+**Para qué.** Que cada respuesta a un ejercicio devuelva, en la misma petición, si fue correcta y qué hacer para entender el procedimiento; y que el intento quede guardado sin duplicarse si el navegador lo reenvía.
+
+**Cómo funciona.**
+
+1. `POST /api/practica/intentos` valida el ejercicio y la respuesta, bloquea la fila del usuario y busca si ya existe un intento con esa `claveIdempotencia`.
+2. Si existe, devuelve el mismo resultado con **200**. Si no, calcula `numeroIntento`, guarda el intento y, solo en el primer intento, actualiza el nivel y la racha del estudiante en la misma transacción.
+3. `FeedbackService` elige el texto según el número de intento y el resultado: primer fallo → pista + error común; segundo fallo → explicación completa + error común; acierto → explicación. Todo viaja en `retroalimentacion` dentro de la respuesta del intento.
+
+| Situación | `retroalimentacion.tipo` | `texto` | `errorComun` |
+|---|---|---|---|
+| Primer acierto | `EXPLICACION` | explicación del ejercicio | — |
+| Primer fallo | `PISTA` | pista | sí |
+| Segundo acierto | `EXPLICACION` | explicación del ejercicio | — |
+| Segundo fallo | `EXPLICACION` | explicación completa | sí |
+
+**Decisiones.**
+
+- **Trazabilidad completa (CA-08):** cada fila de `intento_practica` guarda `usuario_id`, `ejercicio_id`, `es_correcta`, `creado_en` y `tiempo_seg`; también `pista_usada`, `numero_intento` y el snapshot de competencia y nivel.
+- **Idempotencia también bajo concurrencia:** la restricción `UNIQUE (usuario_id, clave_idempotencia)` impide duplicados y el bloqueo pesimista del usuario serializa los envíos simultáneos. Un doble clic o un reintento de red recibe el mismo `intentoId`, no un error.
+- **Transacción única:** si falla la actualización de nivel, el intento no queda registrado (`PracticaTransaccionTest`).
+- **El segundo intento no cuenta para el nivel**, pero sí se persiste y se puede consultar.
+
+**Pruebas.** `FeedbackServiceTest` (las tres ramas de retroalimentación), `PracticaControllerTest` (pista, explicación, segundo fallo, segundo intento y trazabilidad de los cinco datos), `PracticaIdempotenciaConcurrenteTest` (8 envíos simultáneos con la misma clave → un solo intento) y `PracticaTransaccionTest` (rollback si falla el nivel).
+
+**Cómo probarlo a mano.** Con el perfil `dev`, iniciar sesión como estudiante, pedir `GET /api/practica/siguiente?asignatura=CALCULO_DIFERENCIAL`, enviar una opción incorrecta a `POST /api/practica/intentos` y revisar `retroalimentacion` (debe ser `PISTA`). Repetir el mismo cuerpo con otra `claveIdempotencia` y otra opción incorrecta: debe llegar `EXPLICACION` y `puedeReintentar: false`.
+
+**Detalle técnico completo:** [`docs/code/retroalimentacion-e-idempotencia.md`](code/retroalimentacion-e-idempotencia.md).
+
+---
+
 ## Pendientes conocidos
 
 - **Staging (SCRUM-13):** sin él, la verificación manual y las pruebas con usuarios piloto se hacen en local.
 - **Indicadores de grupo (SCRUM-39):** los necesita el dashboard del docente (SCRUM-40).
-- **Registro de intentos de práctica (SCRUM-35):** lo necesita el historial (SCRUM-41).
+- **Historial (SCRUM-41):** la persistencia de intentos ya está en `develop`; falta integrar el endpoint de historial que consume esos datos.
