@@ -33,6 +33,8 @@ public interface IntentoDiagnosticoRepository extends JpaRepository<IntentoDiagn
     /** El intento más reciente del estudiante en esa prueba (EN_CURSO o FINALIZADO). */
     Optional<IntentoDiagnostico> findFirstByUsuarioIdAndPruebaIdOrderByIniciadoEnDesc(Long usuarioId, Long pruebaId);
 
+    Optional<IntentoDiagnostico> findFirstByUsuarioIdAndEstadoOrderByFinalizadoEnDesc(Long usuarioId, EstadoIntento estado);
+
     /** Ids de los intentos que siguen EN_CURSO (para el barrido de intentos vencidos). */
     @Query("select i.id from IntentoDiagnostico i where i.estado = :estado")
     List<Long> findIdsPorEstado(@Param("estado") EstadoIntento estado);

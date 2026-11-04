@@ -82,7 +82,7 @@ Reglas aplicadas:
 - Enunciado, pista y explicación obligatorios.
 - Notación matemática entre `$...$` para `MathText`/KaTeX.
 
-La migración `V6__datos_ejercicios_semilla.sql` se genera a partir de ese CSV. Una prueba de integración compara el CSV con la base.
+La migración `V202610221010__datos_ejercicios_semilla.sql` se genera a partir de ese CSV. Una prueba de integración compara el CSV con la base.
 
 ### 3.3 Criterios de dificultad
 
@@ -114,8 +114,8 @@ La administración docente pertenece a #132/#133/#134 y no forma parte de estas 
 
 | Migración | Contenido |
 |---|---|
-| `V5__esquema_practica.sql` | Tablas, restricciones e índices de práctica |
-| `V6__datos_ejercicios_semilla.sql` | 90 ejercicios semilla y sus opciones |
+| `V202610221000__esquema_practica.sql` | Tablas, restricciones e índices de práctica |
+| `V202610221010__datos_ejercicios_semilla.sql` | 90 ejercicios semilla y sus opciones |
 
 No se editaron `V1`–`V4`. La migración nueva solo crea tablas; no hay operaciones destructivas ni cambios a datos existentes.
 
@@ -500,8 +500,8 @@ Propiedades del diagnóstico existentes:
 
 ### 9.1 Migraciones
 
-- `src/main/resources/db/migration/V5__esquema_practica.sql`
-- `src/main/resources/db/migration/V6__datos_ejercicios_semilla.sql`
+- `src/main/resources/db/migration/V202610221000__esquema_practica.sql`
+- `src/main/resources/db/migration/V202610221010__datos_ejercicios_semilla.sql`
 
 ### 9.2 Contenido
 

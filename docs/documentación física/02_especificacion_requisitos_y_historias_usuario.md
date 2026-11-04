@@ -332,7 +332,7 @@ Cubre los módulos de autenticación, diagnóstico, práctica adaptativa, conten
 | **Actor** | Sistema. |
 | **Prioridad** | Alta |
 | **Estado** | Implementado |
-| **Evidencia** | `V6__datos_ejercicios_semilla.sql`, `ejercicios_practica.csv` |
+| **Evidencia** | `V202610221010__datos_ejercicios_semilla.sql`, `ejercicios_practica.csv` |
 
 ### RF-15 — Historial de resultados
 
