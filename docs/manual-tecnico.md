@@ -6,7 +6,7 @@ Cada repositorio tiene además su propia documentación:
 - **README:** cómo correrlo, configuración y convenciones.
 - **implementacion.md:** qué se construyó, historia por historia.
 
-> Estado al 1 de noviembre de 2026. Staging (SCRUM-13) aún no existe; por eso el despliegue descrito es el local. Cuando exista, se completa la sección 2.
+> Estado al 7 de noviembre de 2026. Staging (SCRUM-13) aún no existe; por eso el despliegue descrito es el local. Cuando exista, se completa la sección 2.
 
 ---
 
@@ -147,7 +147,8 @@ Todas las rutas empiezan por `/api`. Las únicas públicas son `POST /auth/login
 | diagnostico | `GET /diagnosticos/intentos/{id}/resultado` | ESTUDIANTE | Puntaje, categoría y resultado por competencia |
 | practica | `GET /practica/siguiente` | ESTUDIANTE | Siguiente ejercicio según el nivel |
 | practica | `POST /practica/intentos` | ESTUDIANTE | Registra un intento (idempotente) |
-| progreso | `GET /historial` | ESTUDIANTE, DOCENTE | Historial de resultados con filtros (en PR desde `feature/historial`) |
+| progreso | `GET /progreso/me` | ESTUDIANTE | Indicadores de progreso del estudiante: intentos, ejercicios completados, nivel general y por competencia, variación frente al diagnóstico y tendencia semanal (README §15) |
+| progreso | `GET /historial` | ESTUDIANTE, DOCENTE | Historial de resultados con filtros; el docente solo ve estudiantes de sus grupos |
 | analitica | — | DOCENTE | Indicadores de grupo: pendiente (SCRUM-39) |
 
 `GET /api/ping/{rol}` solo existe con los perfiles `dev` y `test`, para probar el acceso por rol.
@@ -173,7 +174,7 @@ Las limitaciones conocidas, como la revocación de tokens o la falta de límite 
 | Pruebas del backend | JUnit 5, MockMvc y Testcontainers, con PostgreSQL real en Docker: `./mvnw test` |
 | Pruebas del frontend | Vitest y Testing Library: `npm test` |
 | Integración continua | GitHub Actions en cada PR y push a `develop` y `main`. Backend: `./mvnw verify` con Java 21. Frontend: `npm ci`, lint, pruebas y build con Node 24 |
-| Accesibilidad | Lighthouse Accessibility 100 en las pantallas principales y uso completo con teclado (frontend, `implementacion.md` §7) |
+| Accesibilidad | Lighthouse Accessibility 100 en las pantallas principales y uso completo con teclado, incluido el dashboard de progreso (frontend, `implementacion.md` §8) |
 | Cobertura | JaCoCo por línea de comandos (backend, `implementacion.md` §3) |
 
 ## 7. Mapa de la documentación
