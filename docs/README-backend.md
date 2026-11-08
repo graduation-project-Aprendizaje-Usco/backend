@@ -167,12 +167,19 @@ src/main/resources/db/dev-data/    datos de prueba (solo perfil dev)
 ## 7. Base de datos y migraciones
 
 - El esquema **solo** lo cambia Flyway; Hibernate está en `ddl-auto: validate`.
-- El orden de las migraciones versionadas es `V1`, `V2`, `V3`, `V4`, `V202610221000`, `V202610221010` y `V202610242250`. La migración repetible `R__usuarios_de_prueba.sql` se carga solo con el perfil `dev`.
-- Estas versiones conservan la identidad histórica aplicada en las bases existentes. No las renombres ni las vuelvas a numerar. Las migraciones nuevas deben usar una versión superior a `202610242250`; no corresponde continuar con `V5`–`V8`.
+- Las migraciones siguen la numeración consecutiva `V1`, `V2`, … `V7`. La siguiente es `V8__descripcion.sql`; no se salta ni se reutiliza un número. Qué crea cada una y el diagrama completo: [modelo-fisico.md](base-de-datos/modelo-fisico.md).
 - **Nunca** edites ni renombres una migración que ya está en `develop`: si necesitas cambiar el esquema, crea la siguiente versión.
+- Si tu base local quedó con los nombres anteriores (`V202610221000`, `V202610221010` o `V202610242250`), Flyway no arranca. Como el SQL de esos archivos no cambió, se ajusta sin borrar datos (en Git Bash; desde PowerShell, pega las tres líneas `UPDATE` en el Query Tool de pgAdmin):
+
+  ```bash
+  docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+  UPDATE flyway_schema_history SET version = '5', script = 'V5__esquema_practica.sql' WHERE version = '202610221000';
+  UPDATE flyway_schema_history SET version = '6', script = 'V6__datos_ejercicios_semilla.sql' WHERE version = '202610221010';
+  UPDATE flyway_schema_history SET version = '7', script = 'V7__crear_grupos_docentes_estudiantes.sql' WHERE version = '202610242250';
+  SQL
+  ```
 - Datos que necesitan todos los entornos (roles, competencias, los 24 ítems del diagnóstico) van en migraciones versionadas de `db/migration`.
 - Datos de prueba que no deben llegar a producción (usuarios demo) van en `db/dev-data` como migración repetible `R__…sql`, que solo se carga con el perfil `dev`.
-- No se debe borrar/recrear la base ni modificar `flyway_schema_history` para resolver un conflicto de migraciones. Ver las versiones y el modelo en [modelo-fisico.md](base-de-datos/modelo-fisico.md).
 
 Usuarios de prueba (solo perfil `dev`):
 
@@ -341,7 +348,7 @@ El contrato completo, las reglas del motor, los niveles, las pruebas manuales y 
 - 90 ejercicios: 45 de `CALCULO_DIFERENCIAL` y 45 de `CALCULO_INTEGRAL`.
 - 5 por asignatura × competencia × nivel.
 - Fuente: `docs/datos/ejercicios_practica.csv`.
-- Migración: `V202610221010__datos_ejercicios_semilla.sql`.
+- Migración: `V6__datos_ejercicios_semilla.sql`.
 - Los contenidos docentes nuevos se crean por la aplicación; no se agregan a Flyway.
 - La administración docente es la historia #132 y no forma parte de las tareas 82, 87, 90 y 95.
 

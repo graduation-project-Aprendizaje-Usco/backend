@@ -31,7 +31,7 @@ Este documento describe el trabajo de las tareas 110 y 114: qué se construyó, 
 ## 2. Alcance y relación con otras historias
 
 - Se apoya en la interfaz de práctica de **#104** y en el motor adaptativo de **#90/#95**.
-- No cambia el modelo de tablas: usa `intento_practica`, `ejercicio`, `opcion_ejercicio` y `nivel_estudiante` de las migraciones `V202610221000` y `V202610221010`.
+- No cambia el modelo de tablas: usa `intento_practica`, `ejercicio`, `opcion_ejercicio` y `nivel_estudiante` de las migraciones `V5` y `V6`.
 - El **historial de resultados (#128)** consume los campos que esta tarea persiste; no necesita cambios en la tabla.
 - La prueba de concurrencia de **#149** puede reutilizar el caso de envíos simultáneos que se agregó aquí.
 - El CRUD docente de contenidos (#132) no forma parte de este alcance.
@@ -216,21 +216,33 @@ El contrato completo y las reglas del motor están en [`motor-practica-adaptativ
 
 ---
 
-## 6. Historial y reconciliación de versiones Flyway
+## 6. Cambio de la migración de grupos
 
-En noviembre de 2026 se renumeraron migraciones que ya estaban aplicadas:
+La migración de grupos pasó de:
 
-| Versión histórica registrada en la base | Nombre temporal en el código | Nombre canónico restaurado |
-|---|---|---|
-| `202610221000` — esquema de práctica | `V5__esquema_practica.sql` | `V202610221000__esquema_practica.sql` |
-| `202610221010` — datos semilla | `V6__datos_ejercicios_semilla.sql` | `V202610221010__datos_ejercicios_semilla.sql` |
-| `202610242250` — grupos | `V7__crear_grupos_docentes_estudiantes.sql` | `V202610242250__crear_grupos_docentes_estudiantes.sql` |
+```text
+V202610242250__crear_grupos_docentes_estudiantes.sql
+```
 
-El historial Git confirma que los renombres temporales no cambiaron el SQL. La auditoría de la base local confirmó que los checksums de los tres archivos coinciden con `flyway_schema_history`. Por ello se restauraron los nombres históricos, sin alterar la base, ejecutar `repair` ni volver a aplicar esas migraciones.
+a:
 
-La prueba `EsquemaBaseDatosTest` comprueba las versiones, los nombres y los checksums esperados. No deben mantenerse copias con ambos nombres: Flyway podría intentar ejecutar de nuevo el mismo SQL bajo otra versión. Las migraciones futuras deben usar versiones superiores a `202610242250`; no se debe continuar con `V8`.
+```text
+V7__crear_grupos_docentes_estudiantes.sql
+```
 
-No se encontró en el repositorio un flujo de despliegue que permita verificar historiales de otros entornos. Antes de desplegar allí, hay que confirmar los nombres y versiones realmente aplicados en cada base compartida. No se debe borrar/recrear una base ni modificar su historial para resolver esta discrepancia.
+El cambio busca que las migraciones sigan la numeración consecutiva (`V1` … `V7`); la siguiente será `V8`. No cambia el contenido SQL ni el esquema.
+
+Consecuencias:
+
+- `src/test/java/.../esquema/EsquemaBaseDatosTest.java` ahora espera `V7__crear_grupos_docentes_estudiantes.sql`.
+- Una base local creada antes del cambio conserva en `flyway_schema_history` la versión vieja y Flyway falla con “Detected applied migration not resolved locally”. Como son datos de prueba, se recrea:
+  ```bash
+  docker compose down
+  # borrar la carpeta aprendizaje-usco-backend/postgres_data/
+  ./mvnw spring-boot:run
+  ```
+- Si quedaron migraciones viejas compiladas en `target/`, ejecutar `./mvnw clean test`.
+- **No se debe renombrar una migración ya aplicada en staging o producción.** En este proyecto el cambio se hizo antes de tener staging; si una base compartida ya la aplicó, hay que reparar su historial o recrearla.
 
 ---
 
@@ -242,12 +254,12 @@ No se encontró en el repositorio un flujo de despliegue que permita verificar h
 |---|---|
 | `src/main/java/.../modulos/practica/service/PracticaService.java` | Bloqueo del usuario antes de comprobar la idempotencia y registrar el intento |
 | `src/main/java/.../modulos/usuario/repository/UsuarioRepository.java` | `findParaBloquear` con `PESSIMISTIC_WRITE` |
-| `src/main/resources/db/migration/V202610242250__crear_grupos_docentes_estudiantes.sql` | Conserva la versión histórica aplicada; se restauró el nombre original tras la auditoría Flyway |
+| `src/main/resources/db/migration/V7__crear_grupos_docentes_estudiantes.sql` | Renombrada desde `V202610242250…` |
 | `src/test/java/.../modulos/practica/controller/PracticaControllerTest.java` | Segundo fallo, cinco datos de trazabilidad y cuerpo con tiempo |
 | `src/test/java/.../modulos/practica/service/PracticaIdempotenciaConcurrenteTest.java` | Ocho envíos simultáneos con la misma clave |
 | `src/test/java/.../modulos/practica/service/PracticaTransaccionTest.java` | Rollback si falla la actualización de nivel |
-| `src/test/java/.../esquema/EsquemaBaseDatosTest.java` | Versiones y checksums históricos de las migraciones |
-| `docs/README-backend.md` | Reglas de trazabilidad e idempotencia; conservación de versiones históricas Flyway |
+| `src/test/java/.../esquema/EsquemaBaseDatosTest.java` | Lista de migraciones con `V7` |
+| `docs/README-backend.md` | Reglas de trazabilidad e idempotencia; numeración consecutiva de migraciones |
 | `docs/implementacion.md` | Sección de retroalimentación y registro de intentos |
 | `docs/code/motor-practica-adaptativa.md` | Referencia a las tareas 110/114 |
 | `docs/code/retroalimentacion-e-idempotencia.md` | Este documento |
@@ -314,10 +326,10 @@ Las pruebas del panel comprueban la etiqueta “Pista”/“Explicación”, el 
 
 ## 10. Coordinación y pendientes
 
-- **Historial (#128 / SCRUM-41):** si se integra una rama que cambia `EsquemaBaseDatosTest`, debe conservar el nombre canónico `V202610242250__crear_grupos_docentes_estudiantes.sql` y los checksums históricos.
+- **Historial (#128 / SCRUM-41):** su rama `feature/historial` modifica `EsquemaBaseDatosTest` esperando `V202610242250…`. Al rebasar sobre esta rama debe cambiar esa línea a `V7__crear_grupos_docentes_estudiantes.sql`. También agrega una sección 4 en `docs/implementacion.md`; hay que renumerar una de las dos secciones.
 - **Accesibilidad (#52/SCRUM-52):** su rama `feature/accesibilidad` agrega un `resultadoRef` y un efecto de foco en `PracticaPage.jsx`. El panel nuevo ya mueve el foco al resultado y la página ya devuelve el foco al enunciado al reintentar; al rebasar, conservar los cambios de tema y quitar el `resultadoRef` duplicado.
-- **Documentación de entrega (SCRUM-53):** al integrar cambios documentales, conservar las versiones históricas listadas en `docs/base-de-datos/modelo-fisico.md`; las migraciones futuras deben superar `202610242250`.
-- **Otros entornos:** sus historiales no están disponibles en este repositorio y no se pudieron verificar. Confirmarlos antes de desplegar.
+- **Documentación de entrega (SCRUM-53):** `docs/base-de-datos/modelo-fisico.md` todavía menciona `V202610242250__crear_grupos_docentes_estudiantes.sql`; debe actualizarse a `V7`. El README de esa rama habla de migraciones base `V1` a `V6`; debe decir `V1` a `V7` y mantener la numeración consecutiva.
+- **Staging:** si una base compartida ya aplicó la migración con el nombre viejo, no se debe renombrar; hay que reparar el historial o recrear la base antes de desplegar.
 - **Estado de la rama:** los cambios están verificados, pero aún no se han fusionado a `develop`.
 
 ---

@@ -69,9 +69,9 @@ public class EsquemaBaseDatosTest {
                 "2|V2__datos_base_roles_competencias.sql|1393231534",
                 "3|V3__esquema_diagnostico.sql|-896432437",
                 "4|V4__datos_prueba_diagnostica.sql|1296514020",
-                "202610221000|V202610221000__esquema_practica.sql|-1136012897",
-                "202610221010|V202610221010__datos_ejercicios_semilla.sql|439716676",
-                "202610242250|V202610242250__crear_grupos_docentes_estudiantes.sql|-996979361");
+                "5|V5__esquema_practica.sql|-1136012897",
+                "6|V6__datos_ejercicios_semilla.sql|439716676",
+                "7|V7__crear_grupos_docentes_estudiantes.sql|-996979361");
     }
 
     @Test
