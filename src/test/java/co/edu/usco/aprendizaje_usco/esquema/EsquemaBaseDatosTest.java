@@ -57,17 +57,21 @@ public class EsquemaBaseDatosTest {
 
     @Test
     void flywayAplicaSoloLasMigracionesVersionadasEnPerfilTest() {
-        List<String> scripts = jdbcTemplate.queryForList(
-                "SELECT script FROM flyway_schema_history WHERE success ORDER BY installed_rank", String.class);
+        List<String> migrations = jdbcTemplate.queryForList("""
+                SELECT version || '|' || script || '|' || checksum
+                FROM flyway_schema_history
+                WHERE success
+                ORDER BY installed_rank
+                """, String.class);
 
-        assertThat(scripts).containsExactly(
-                "V1__esquema_inicial.sql",
-                "V2__datos_base_roles_competencias.sql",
-                "V3__esquema_diagnostico.sql",
-                "V4__datos_prueba_diagnostica.sql",
-                "V5__esquema_practica.sql",
-                "V6__datos_ejercicios_semilla.sql",
-                "V7__crear_grupos_docentes_estudiantes.sql");
+        assertThat(migrations).containsExactly(
+                "1|V1__esquema_inicial.sql|-241922350",
+                "2|V2__datos_base_roles_competencias.sql|1393231534",
+                "3|V3__esquema_diagnostico.sql|-896432437",
+                "4|V4__datos_prueba_diagnostica.sql|1296514020",
+                "5|V5__esquema_practica.sql|-1136012897",
+                "6|V6__datos_ejercicios_semilla.sql|439716676",
+                "7|V7__crear_grupos_docentes_estudiantes.sql|-996979361");
     }
 
     @Test

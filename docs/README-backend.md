@@ -36,10 +36,17 @@ git checkout develop
 cp .env.template .env           # Windows: copy .env.template .env  → y llena los valores
 
 # Docker Desktop debe estar abierto
-./mvnw spring-boot:run          # Windows: mvnw.cmd spring-boot:run
+docker compose up -d            # PostgreSQL y pgAdmin; conserva los datos en postgres_data/
+./mvnw spring-boot:run          # Windows: .\mvnw.cmd spring-boot:run
 ```
 
-Al arrancar con el perfil `dev`, Spring Boot levanta el contenedor de PostgreSQL definido en `compose.yaml` (publicado en el puerto 5433 de tu equipo), Flyway aplica las migraciones y carga los usuarios de prueba.
+Con el perfil `dev`, Spring Boot conecta al PostgreSQL de `compose.yaml` (puerto local 5433), valida/aplica las migraciones pendientes de Flyway y carga los usuarios de prueba. También se puede levantar toda la aplicación en contenedores:
+
+```bash
+docker compose --profile backend up --build
+```
+
+PostgreSQL guarda sus datos en `postgres_data/`. Para detener los servicios sin borrar los datos usa `docker compose stop`.
 
 | Comprobación | URL | Resultado esperado |
 |---|---|---|
@@ -55,8 +62,11 @@ Al arrancar con el perfil `dev`, Spring Boot levanta el contenedor de PostgreSQL
 |---|---|
 | `./mvnw spring-boot:run` | Corre la API en el puerto 8080 (perfil `dev`) |
 | `./mvnw test` | Pruebas unitarias y de integración (Testcontainers, requiere Docker). Es lo mismo que corre CI en cada PR |
+| `./mvnw -B -ntp verify` | Compila, ejecuta las pruebas y verifica/empaqueta el backend |
 | `./mvnw clean package` | Genera el `.jar` en `target/` |
 | `./mvnw flyway:info` | Estado de las migraciones (opcional, si se configura el plugin) |
+
+Verificación registrada el **4 de noviembre de 2026**: `./mvnw -B -ntp verify` terminó con `BUILD SUCCESS` (229 pruebas, 0 fallos y 0 errores).
 
 ## 4. Configuración
 
@@ -159,6 +169,15 @@ src/main/resources/db/dev-data/    datos de prueba (solo perfil dev)
 - El esquema **solo** lo cambia Flyway; Hibernate está en `ddl-auto: validate`.
 - Las migraciones siguen la numeración consecutiva `V1`, `V2`, … `V7`. La siguiente es `V8__descripcion.sql`; no se salta ni se reutiliza un número. Qué crea cada una y el diagrama completo: [modelo-fisico.md](base-de-datos/modelo-fisico.md).
 - **Nunca** edites ni renombres una migración que ya está en `develop`: si necesitas cambiar el esquema, crea la siguiente versión.
+- Si tu base local quedó con los nombres anteriores (`V202610221000`, `V202610221010` o `V202610242250`), Flyway no arranca. Como el SQL de esos archivos no cambió, se ajusta sin borrar datos (en Git Bash; desde PowerShell, pega las tres líneas `UPDATE` en el Query Tool de pgAdmin):
+
+  ```bash
+  docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+  UPDATE flyway_schema_history SET version = '5', script = 'V5__esquema_practica.sql' WHERE version = '202610221000';
+  UPDATE flyway_schema_history SET version = '6', script = 'V6__datos_ejercicios_semilla.sql' WHERE version = '202610221010';
+  UPDATE flyway_schema_history SET version = '7', script = 'V7__crear_grupos_docentes_estudiantes.sql' WHERE version = '202610242250';
+  SQL
+  ```
 - Datos que necesitan todos los entornos (roles, competencias, los 24 ítems del diagnóstico) van en migraciones versionadas de `db/migration`.
 - Datos de prueba que no deben llegar a producción (usuarios demo) van en `db/dev-data` como migración repetible `R__…sql`, que solo se carga con el perfil `dev`.
 
@@ -353,4 +372,52 @@ Los grupos se gestionan con el docente autenticado como responsable; el servidor
 | `GET /api/grupos/{grupoId}/estudiantes` | Consulta los estudiantes de un grupo autorizado | `DOCENTE` responsable, `ADMIN` | 200 · 401 · 403 (grupo ajeno) · 404 |
 | `POST /api/grupos/{grupoId}/estudiantes` | Inscribe por correo. Cuerpo: `{"correo":"u20201234567@usco.edu.co"}` | `DOCENTE` responsable, `ADMIN` | 201 · 400 · 401 · 403 · 404 · 409 · 422 |
 
-Los códigos se guardan en mayúsculas y son únicos. Solo pueden inscribirse cuentas activas con rol `ESTUDIANTE`; repetir una inscripción devuelve 409. Swagger describe las solicitudes, respuestas y restricciones de acceso en la configuración existente.
+Un grupo tiene un docente responsable y se relaciona con sus estudiantes inscritos mediante `grupo_estudiante`; la clave compuesta impide duplicar la misma inscripción. Los códigos se guardan en mayúsculas y son únicos. Solo pueden inscribirse cuentas activas con rol `ESTUDIANTE`; repetir una inscripción devuelve 409. Un docente no puede consultar ni inscribir estudiantes en un grupo de otro docente: esas operaciones responden 403. `ADMIN` puede consultar cualquier grupo e inscribir en cualquiera. Los estudiantes no pueden gestionar grupos. Swagger describe las solicitudes, respuestas y restricciones de acceso.
+
+## 15. Mi progreso (API)
+
+`GET /api/progreso/me` devuelve los indicadores del estudiante autenticado y requiere un JWT con rol `ESTUDIANTE` (`Authorization: Bearer <token>`). El usuario se identifica a partir del token; no se recibe un `usuarioId`. Sin autenticación responde 401 y con un rol distinto, 403.
+
+La respuesta se compone de los indicadores generales y tres listas/datos de resumen:
+
+```json
+{
+  "totalIntentos": 8,
+  "ejerciciosCompletados": 5,
+  "nivelGeneral": "INTERMEDIO",
+  "porcentajeGeneral": 65.00,
+  "evaluacionParcial": true,
+  "dimensiones": [
+    {
+      "competenciaId": 1,
+      "codigo": "ALGEBRAICA",
+      "nombre": "Competencia algebraica",
+      "intentosEvaluados": 4,
+      "intentosCorrectos": 3,
+      "porcentajeAciertos": 75.00,
+      "nivel": "INTERMEDIO",
+      "porcentajeDiagnostico": 60.00,
+      "variacionPuntosPorcentuales": 15.00,
+      "estadoVariacion": "MEJORA",
+      "sinActividad": false
+    }
+  ],
+  "tendenciaSemanal": [
+    {
+      "anio": 2026,
+      "semana": 44,
+      "fechaInicio": "2026-10-26",
+      "etiqueta": "Semana 44 (26 oct)",
+      "intentosEvaluados": 4,
+      "intentosCorrectos": 3,
+      "porcentajeAciertos": 75.00
+    }
+  ]
+}
+```
+
+El ejemplo muestra la forma del DTO, no datos fijos del sistema. `dimensiones` contiene las competencias del catálogo. Sus porcentajes se calculan como aciertos sobre intentos de práctica evaluados de esa dimensión; los intentos correctos cuentan una vez en `ejerciciosCompletados`, que representa ejercicios distintos acertados en el primer o segundo intento. `totalIntentos` cuenta los registros de intentos.
+
+Los niveles de dominio por dimensión y general usan el porcentaje de aciertos: `INICIAL` (<40 %), `BASICO` (40 a <60 %), `INTERMEDIO` (60 a <80 %) y `AVANZADO` (80–100 %). Para consolidar el nivel y porcentaje general se requieren **al menos tres intentos evaluados por dimensión**. El porcentaje general es el promedio simple de los porcentajes de las dimensiones que alcanzaron el umbral; no pondera cada dimensión por su cantidad de intentos. Si hay dimensiones consolidadas pero no todas alcanzaron el umbral, `evaluacionParcial` es `true`. Si ninguna alcanzó tres intentos, el nivel es `SIN_EVALUAR` y el porcentaje general es `null`.
+
+Para cada dimensión, `porcentajeDiagnostico` corresponde al último diagnóstico finalizado. `variacionPuntosPorcentuales` es la diferencia entre el porcentaje de práctica y el diagnóstico, y `estadoVariacion` puede ser `MEJORA`, `RETROCESO`, `SIN_CAMBIO`, `DIAGNOSTICO_PENDIENTE` o `PRACTICA_PENDIENTE`. La variación, los porcentajes y el nivel quedan nulos cuando no se pueden calcular; `sinActividad` señala que no hay intentos de práctica evaluados para esa dimensión. Con cero intentos globales, los contadores son cero, el nivel general es `SIN_EVALUAR`, el porcentaje general es nulo y la tendencia semanal es una lista vacía. La tendencia solo incluye semanas con intentos; no agrega semanas sin actividad. Cada registro semanal informa año, semana ISO, fecha de inicio, etiqueta, intentos, aciertos y porcentaje.

@@ -538,6 +538,7 @@ PostgreSQL 17. El esquema se gestiona exclusivamente con Flyway; Hibernate solo 
 | `V4__datos_prueba_diagnostica.sql` | 24 ítems y opciones de la prueba v2.0. |
 | `V5__esquema_practica.sql` | Tablas de práctica adaptativa. |
 | `V6__datos_ejercicios_semilla.sql` | 90 ejercicios semilla. |
+| `V7__crear_grupos_docentes_estudiantes.sql` | Tablas de grupos y asociación docente-estudiante. |
 | `R__usuarios_de_prueba.sql` | Usuarios de prueba (solo perfil dev). |
 
 ### 10.4 Datos personales y académicos
