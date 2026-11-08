@@ -9,7 +9,7 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 | [Inicio de sesión con JWT](#1-inicio-de-sesión-con-jwt-scrum-16) | SCRUM-16 | Nicolás Pérez | En `develop` |
 | [Control de acceso por rol](#2-control-de-acceso-por-rol-scrum-12) | SCRUM-12 | Fernando Pérez (integración: Nicolás Pérez) | En `develop` |
 | [Pruebas del diagnóstico](#3-pruebas-del-módulo-de-diagnóstico-scrum-27) | SCRUM-27 | Nicolás Pérez | En `develop` (falta la evidencia manual) |
-| [Historial de resultados](#5-historial-de-resultados-scrum-41) | SCRUM-41 (168) | Nicolás Pérez | En `feature/historial` |
+| [Historial de resultados](#5-historial-de-resultados-scrum-41) | SCRUM-41 (168) | Nicolás Pérez | En `develop` |
 | Aplicación de la prueba diagnóstica, puntaje y categoría | SCRUM-22, 23, 24 | Jorel Vargas | En `develop` · ver README §12 |
 | Motor de práctica adaptativa | SCRUM-28 a 31 | Juan David Polanco | En `develop` · ver README §13 |
 | [Retroalimentación inmediata y registro de intentos](#4-retroalimentación-inmediata-y-registro-de-intentos-110-114) | 110, 114 | Juan David Polanco | En `develop` · ver README §13 |
