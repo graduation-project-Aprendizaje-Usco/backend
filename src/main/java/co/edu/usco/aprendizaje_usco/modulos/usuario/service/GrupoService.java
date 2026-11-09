@@ -95,6 +95,27 @@ public class GrupoService {
         return EstudianteGrupoResponse.desde(estudiante);
     }
 
+    /**
+     * Regla reutilizable de acceso por grupo: un docente solo puede consultar a
+     * estudiantes inscritos en alguno de sus grupos.
+     */
+    @Transactional(readOnly = true)
+    public boolean esDocenteDe(Long docenteId, Long estudianteId) {
+        return grupoEstudianteRepository
+                .existsByEstudiante_IdAndGrupo_Docente_Id(estudianteId, docenteId);
+    }
+
+    /** Grupo que pertenece al docente autenticado; 404 si no existe y 403 si es ajeno. */
+    @Transactional(readOnly = true)
+    public Grupo obtenerGrupoDelDocente(Long grupoId, Long docenteId) {
+        Grupo grupo = grupoRepository.findById(grupoId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Grupo", grupoId));
+        if (!grupo.getDocente().getId().equals(docenteId)) {
+            throw new ProhibidoException("No tienes permiso para consultar este grupo");
+        }
+        return grupo;
+    }
+
     private Grupo grupoAutorizado(Long grupoId, Long solicitanteId, boolean administrador) {
         Grupo grupo = grupoRepository.findById(grupoId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Grupo", grupoId));

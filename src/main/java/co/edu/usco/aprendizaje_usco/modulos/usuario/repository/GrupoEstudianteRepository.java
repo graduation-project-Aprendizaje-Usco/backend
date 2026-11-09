@@ -16,4 +16,6 @@ public interface GrupoEstudianteRepository extends JpaRepository<GrupoEstudiante
             order by ge.estudiante.apellidos, ge.estudiante.nombres
             """)
     List<GrupoEstudiante> buscarPorGrupo(@Param("grupoId") Long grupoId);
+
+    boolean existsByEstudiante_IdAndGrupo_Docente_Id(Long estudianteId, Long docenteId);
 }

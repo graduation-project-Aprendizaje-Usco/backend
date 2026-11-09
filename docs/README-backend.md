@@ -423,3 +423,21 @@ El ejemplo muestra la forma del DTO, no datos fijos del sistema. `dimensiones` c
 Los niveles de dominio por dimensión y general usan el porcentaje de aciertos: `INICIAL` (<40 %), `BASICO` (40 a <60 %), `INTERMEDIO` (60 a <80 %) y `AVANZADO` (80–100 %). Para consolidar el nivel y porcentaje general se requieren **al menos tres intentos evaluados por dimensión**. El porcentaje general es el promedio simple de los porcentajes de las dimensiones que alcanzaron el umbral; no pondera cada dimensión por su cantidad de intentos. Si hay dimensiones consolidadas pero no todas alcanzaron el umbral, `evaluacionParcial` es `true`. Si ninguna alcanzó tres intentos, el nivel es `SIN_EVALUAR` y el porcentaje general es `null`.
 
 Para cada dimensión, `porcentajeDiagnostico` corresponde al último diagnóstico finalizado. `variacionPuntosPorcentuales` es la diferencia entre el porcentaje de práctica y el diagnóstico, y `estadoVariacion` puede ser `MEJORA`, `RETROCESO`, `SIN_CAMBIO`, `DIAGNOSTICO_PENDIENTE` o `PRACTICA_PENDIENTE`. La variación, los porcentajes y el nivel quedan nulos cuando no se pueden calcular; `sinActividad` señala que no hay intentos de práctica evaluados para esa dimensión. Con cero intentos globales, los contadores son cero, el nivel general es `SIN_EVALUAR`, el porcentaje general es nulo y la tendencia semanal es una lista vacía. La tendencia solo incluye semanas con intentos; no agrega semanas sin actividad. Cada registro semanal informa año, semana ISO, fecha de inicio, etiqueta, intentos, aciertos y porcentaje.
+
+## 16. Analítica de grupos (API)
+
+Solo el docente dueño del grupo puede consultar sus indicadores. El servidor obtiene el docente del `sub` del JWT y valida la pertenencia del grupo; un docente ajeno recibe 403 y un grupo inexistente, 404. `ADMIN` y `ESTUDIANTE` reciben 403.
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/analitica/grupos/{grupoId}?competencia=&desde=&hasta=` | Resumen del grupo: total de estudiantes, estudiantes con actividad, promedio general, promedio por dimensión, distribución de categorías, estudiantes en riesgo y tabla de estudiantes | 200 · 400 (competencia inválida) · 401 · 403 · 404 · 422 (`desde` posterior a `hasta`) |
+| `GET /api/analitica/grupos/{grupoId}/estudiantes/{estudianteId}?competencia=&desde=&hasta=` | Detalle de un estudiante del grupo: práctica por dimensión y último diagnóstico | 200 · 400 · 401 · 403 · 404 (estudiante fuera del grupo) · 422 |
+
+- **Periodo:** `desde` y `hasta` son fechas `AAAA-MM-DD`, ambas incluidas y en hora de Colombia. Si se omiten, se usa todo el historial. Los filtros se aplican a `intento_practica.creado_en` y a `intento_diagnostico.finalizado_en`.
+- **Competencia:** si se envía, solo se calculan las métricas de esa dimensión; la distribución de categorías sigue siendo global.
+- **Promedio por dimensión:** promedio simple de los porcentajes individuales de los estudiantes con actividad en esa dimensión.
+- **Categorías:** última categoría de diagnóstico finalizado por estudiante (`ALTO_RIESGO`, `RIESGO_MODERADO`, `NIVEL_ADECUADO`) o `SIN_DIAGNOSTICO`.
+- **Estudiante en riesgo:** último diagnóstico `ALTO_RIESGO` o promedio de práctica menor al 50 %. Un estudiante sin actividad se informa con `sinActividad: true` y no se marca en riesgo por ese solo hecho.
+- **Detalle:** incluye las dimensiones del estudiante y el último diagnóstico con sus resultados por competencia. La pantalla reutiliza `GET /api/historial?estudianteId=…` para el historial.
+
+El contrato y las decisiones de implementación están en [`docs/code/indicadores-grupo-docente.md`](code/indicadores-grupo-docente.md).

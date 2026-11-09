@@ -25,7 +25,7 @@ Se implementó el módulo backend de práctica adaptativa sobre la base existent
 
 También se implementó el registro de intentos y la retroalimentación inmediata necesarios para que el motor y los niveles funcionen de punta a punta. El CRUD docente de #132/#133/#134 **no** se implementó en esta fase; el modelo queda preparado para esas historias.
 
-**Estado de validación:** `.\mvnw.cmd verify` termina en `BUILD SUCCESS` con **216 pruebas, 0 fallos y 0 errores**. Requiere Docker Desktop para Testcontainers.
+**Estado de validación:** `.\mvnw.cmd verify` termina en `BUILD SUCCESS` con **249 pruebas, 0 fallos y 0 errores**. Requiere Docker Desktop para Testcontainers.
 
 ---
 
@@ -580,7 +580,7 @@ Propiedades del diagnóstico existentes:
 ### 10.2 Resultado
 
 ```text
-.\mvnw.cmd test    -> 216 pruebas, 0 fallos, 0 errores
+.\mvnw.cmd test    -> 249 pruebas, 0 fallos, 0 errores
 .\mvnw.cmd verify  -> BUILD SUCCESS
 ```
 
