@@ -17,6 +17,11 @@ public interface ContenidoRepository extends JpaRepository<Contenido, Long> {
     @EntityGraph(attributePaths = "competencia")
     Optional<Contenido> findByIdAndCreadoPor_Id(Long id, Long docenteId);
 
+    /** Catálogo del administrador: todos los contenidos, con competencia y creador. */
+    @EntityGraph(attributePaths = {"competencia", "creadoPor"})
+    @Query("select c from Contenido c order by c.titulo, c.id")
+    List<Contenido> findAllParaAdmin();
+
     @Query("""
             select c from Contenido c
             join fetch c.competencia
