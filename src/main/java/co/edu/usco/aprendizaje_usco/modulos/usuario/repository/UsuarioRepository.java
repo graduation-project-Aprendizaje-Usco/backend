@@ -1,7 +1,10 @@
 package co.edu.usco.aprendizaje_usco.modulos.usuario.repository;
 
+import co.edu.usco.aprendizaje_usco.modulos.usuario.model.EstadoUsuario;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.model.NombreRol;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Usuario;
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,6 +23,20 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByCorreo(String correo);
 
     boolean existsByCorreo(String correo);
+
+    /**
+     * Lista del administrador. Cada filtro es opcional (null = sin filtro);
+     * {@code texto} llega ya en minúsculas y con comodines ("%ana%").
+     */
+    @EntityGraph(attributePaths = "rol")
+    @Query("""
+            select u from Usuario u
+            where (:rol is null or u.rol.nombre = :rol)
+              and (:estado is null or u.estado = :estado)
+              and (:texto is null or lower(concat(u.nombres, ' ', u.apellidos, ' ', u.correo)) like :texto)
+            order by u.apellidos, u.nombres""")
+    List<Usuario> buscarParaAdmin(@Param("rol") NombreRol rol, @Param("estado") EstadoUsuario estado,
+                                  @Param("texto") String texto);
 
     /**
      * Bloquea la fila del usuario durante la transacción. Se usa al registrar un
