@@ -6,7 +6,7 @@ Cada repositorio tiene además su propia documentación:
 - **README:** cómo correrlo, configuración y convenciones.
 - **implementacion.md:** qué se construyó, historia por historia.
 
-> Estado al 7 de noviembre de 2026. Staging (SCRUM-13) aún no existe; por eso el despliegue descrito es el local. Cuando exista, se completa la sección 2.
+> Estado al 10 de noviembre de 2026. En el repositorio todavía no hay configuración de staging (SCRUM-13); por eso el despliegue descrito es el local. Cuando exista, se completa la sección 2.
 
 ---
 
@@ -151,8 +151,8 @@ Todas las rutas empiezan por `/api`. Las únicas públicas son `POST /auth/login
 | progreso | `GET /historial` | ESTUDIANTE, DOCENTE | Historial de resultados con filtros; el docente solo ve estudiantes de sus grupos |
 | analitica | `GET /analitica/grupos/{grupoId}` | DOCENTE | Resumen del grupo: promedios, distribución de categorías, riesgo y estudiantes (SCRUM-39) |
 | analitica | `GET /analitica/grupos/{grupoId}/estudiantes/{estudianteId}` | DOCENTE | Detalle del estudiante dentro del grupo (SCRUM-39) |
-| contenido | `GET/POST /contenidos` y `PUT/PATCH/DELETE /contenidos/{id}` | DOCENTE | CRUD de contenidos propios (SCRUM-39) |
-| contenido | `GET/POST /ejercicios` y `PUT/PATCH/DELETE /ejercicios/{id}` | DOCENTE | CRUD de ejercicios propios (SCRUM-39) |
+| contenido | `GET/POST /contenidos`, `PUT/DELETE /contenidos/{id}` y `PATCH /contenidos/{id}/estado` | DOCENTE | Crear, editar, activar o desactivar y borrar sus contenidos (SCRUM-43) |
+| contenido | `GET/POST /ejercicios`, `PUT/DELETE /ejercicios/{id}` y `PATCH /ejercicios/{id}/estado` | DOCENTE | Crear, editar, activar o desactivar y borrar sus ejercicios; si ya tienen intentos, solo se desactivan (SCRUM-43) |
 
 `GET /api/ping/{rol}` solo existe con los perfiles `dev` y `test`, para probar el acceso por rol.
 
@@ -164,7 +164,7 @@ Todas las rutas empiezan por `/api`. Las únicas públicas son `POST /auth/login
 | Autenticación | JWT HS256 de 2 h con `sub`, `correo` y `rol`; llave en `JWT_SECRET` (≥ 32 caracteres) |
 | Autorización | Rol desde el claim `rol` (`JwtRoleConverter`); `@PreAuthorize` en cada endpoint |
 | Errores | 401 sin token o con token inválido; 403 rol sin permiso; siempre con el formato estándar de error |
-| Aislamiento de datos | El id del usuario sale del token, nunca del cliente; un estudiante solo ve lo suyo y un docente solo a estudiantes de sus grupos |
+| Aislamiento de datos | El id del usuario sale del token, nunca del cliente; un estudiante solo ve lo suyo, un docente solo a estudiantes de sus grupos y solo puede editar los contenidos y ejercicios que creó (403 en los demás) |
 | CORS | Solo los orígenes de `CORS_ORIGINS` |
 | Datos personales (Ley 1581) | Autorización de datos al iniciar el diagnóstico; los usuarios de prueba solo existen en `dev` |
 
@@ -177,7 +177,8 @@ Las limitaciones conocidas, como la revocación de tokens o la falta de límite 
 | Pruebas del backend | JUnit 5, MockMvc y Testcontainers, con PostgreSQL real en Docker: `./mvnw test` |
 | Pruebas del frontend | Vitest y Testing Library: `npm test` |
 | Integración continua | GitHub Actions en cada PR y push a `develop` y `main`. Backend: `./mvnw verify` con Java 21. Frontend: `npm ci`, lint, pruebas y build con Node 24 |
-| Accesibilidad | Lighthouse Accessibility 100 en las pantallas principales y uso completo con teclado, incluido el dashboard de progreso (frontend, `implementacion.md` §8) |
+| Accesibilidad | Lighthouse Accessibility 100 en las pantallas principales y uso completo con teclado, incluidos los dashboards de progreso y del docente (frontend, `implementacion.md` §8) |
+| Rendimiento | k6 con 30 usuarios concurrentes durante 1 minuto (RNF-02: p95 < 1 s). El 9 de noviembre: p95 de 20.20 ms en `GET /practica/siguiente` y de 20.97 ms en `POST /diagnosticos/intentos/{id}/finalizar`, sin errores. Script en `pruebas/rendimiento/` (SCRUM-44) |
 | Cobertura | JaCoCo por línea de comandos (backend, `implementacion.md` §3) |
 
 ## 7. Mapa de la documentación
@@ -189,6 +190,9 @@ Las limitaciones conocidas, como la revocación de tokens o la falta de límite 
 | `docs/base-de-datos/modelo-fisico.md` | Modelo de datos final: diagrama completo, tablas, restricciones y decisiones |
 | `docs/code/motor-practica-adaptativa.md` | Diseño del motor de práctica adaptativa |
 | `docs/code/retroalimentacion-e-idempotencia.md` | Retroalimentación inmediata, trazabilidad e idempotencia de los intentos de práctica |
+| `docs/code/indicadores-grupo-docente.md` | Indicadores de grupo para el docente (SCRUM-39) |
+| `docs/code/gestion-actividades-contenidos.md` | Gestión de contenidos y ejercicios por el docente (SCRUM-43) |
+| `docs/code/rendimiento-servicios-criticos.md` · `pruebas/rendimiento/` | Pruebas de rendimiento con k6 y sus resultados (SCRUM-44) |
 | `docs/documentación física/` | Documento maestro, requisitos e historias de usuario, plan de pruebas |
 | `docs/tareas-y-responsables.md` | Qué pide cada tarea y quién la tiene |
 | `CONTRIBUTING.md` (cada repo) | Ramas, commits y PR |
