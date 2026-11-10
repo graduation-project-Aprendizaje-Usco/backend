@@ -109,6 +109,25 @@ class AnaliticaGrupoControllerTest {
     }
 
     @Test
+    void calculaDimensionMasDebilTopDeErroresYEvolucion() throws Exception {
+        intento(ana, "DIF-ALG-1-01", 1, false, "2026-08-10T15:00:00Z");
+        intento(ana, "DIF-ALG-1-01", 2, false, "2026-08-11T15:00:00Z");
+        intento(beto, "DIF-LOG-1-01", 1, false, "2026-08-12T15:00:00Z");
+        intento(beto, "DIF-LOG-1-01", 2, true, "2026-08-13T15:00:00Z");
+
+        resumen()
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dimensionMasDebil.codigo").value("ALGEBRAICA"))
+                .andExpect(jsonPath("$.topEjerciciosErrores.length()").value(2))
+                .andExpect(jsonPath("$.topEjerciciosErrores[0].codigo").value("DIF-ALG-1-01"))
+                .andExpect(jsonPath("$.topEjerciciosErrores[0].errores").value(2))
+                .andExpect(jsonPath("$.topEjerciciosErrores[1].codigo").value("DIF-LOG-1-01"))
+                .andExpect(jsonPath("$.evolucionGeneral.length()").value(1))
+                .andExpect(jsonPath("$.evolucionGeneral[0].intentosEvaluados").value(4))
+                .andExpect(jsonPath("$.evolucionGeneral[0].intentosCorrectos").value(1));
+    }
+
+    @Test
     void filtraPorCompetenciaYPorRangoDeFechas() throws Exception {
         intento(ana, "DIF-ALG-1-01", 1, true, "2026-08-10T15:00:00Z");
         intento(ana, "DIF-ALG-1-01", 2, false, "2026-08-11T15:00:00Z");

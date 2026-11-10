@@ -2,7 +2,7 @@
 
 **Proyecto:** Aprendizaje USCO<br>
 **Épica:** EPIC-4 — Seguimiento del progreso y analítica de aprendizaje<br>
-**Tareas:** 123 (servicio) y 124 (dashboard)<br>
+**Tareas:** 123 (servicio), 124 (dashboard) y 131 (indicadores derivados)<br>
 **Responsable de la tarea:** Jorel Vargas (implementación backend: Juan David Polanco)<br>
 **Ramas:** `feature/SCRUM-39-indicadores-grupo-docente` (backend) y `feature/SCRUM-40-dashboard-docente` (frontend)<br>
 **Fecha:** noviembre de 2026<br>
@@ -110,6 +110,22 @@ Devuelve `estudiante`, `dimensiones` y `ultimoDiagnostico`. Si el estudiante no 
 
 ---
 
+## 3.1 Indicadores derivados (#131)
+
+El mismo endpoint de resumen devuelve tres indicadores adicionales:
+
+| Campo | Cálculo |
+|---|---|
+| `dimensionMasDebil` | Dimensión con menor promedio entre las que tienen al menos un estudiante con actividad; `null` si no hay datos |
+| `topEjerciciosErrores` | Hasta 5 ejercicios del grupo ordenados por cantidad de errores, luego por intentos y por id |
+| `evolucionGeneral` | Promedio semanal del grupo (`DATE_TRUNC('week', creado_en)`) con intentos, aciertos y porcentaje |
+
+- Los tres respetan los filtros `competencia`, `desde` y `hasta`.
+- El top de errores cuenta todos los intentos de práctica del grupo, no solo el primero.
+- La evolución usa la misma zona horaria que el resto del módulo (`America/Bogota`).
+
+---
+
 ## 4. Permisos
 
 - `GrupoService.obtenerGrupoDelDocente(grupoId, docenteId)` devuelve el grupo o lanza 404/403.
@@ -157,7 +173,7 @@ npm run lint
 npm run build
 ```
 
-Resultados: backend **249 pruebas** y frontend **98 pruebas** (al momento de esta implementación).
+Resultados: backend **262 pruebas** y frontend **106 pruebas** (al momento de esta implementación).
 
 ---
 

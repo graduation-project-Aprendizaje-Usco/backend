@@ -23,7 +23,6 @@ import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -57,7 +56,7 @@ public class NivelEstudianteService {
      * Inicializa los niveles de un diagnostico recien finalizado. Es idempotente:
      * si el estudiante ya tiene un nivel de practica, no lo sobrescribe.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void inicializarDesdeResultados(Long usuarioId, Long intentoDiagnosticoId,
                                            List<DiagnosticoFinalizadoEvent.ResultadoDimensionSnapshot> resultados) {
         Usuario usuario = usuarioRepository.getReferenceById(usuarioId);

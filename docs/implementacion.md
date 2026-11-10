@@ -11,6 +11,9 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 | [Pruebas del diagnóstico](#3-pruebas-del-módulo-de-diagnóstico-scrum-27) | SCRUM-27 | Nicolás Pérez | En `develop` (falta la evidencia manual) |
 | [Historial de resultados](#5-historial-de-resultados-scrum-41) | SCRUM-41 (168) | Nicolás Pérez | En `develop` |
 | [Indicadores de grupo para el docente](#6-indicadores-de-grupo-para-el-docente-scrum-39) | SCRUM-39 (123) | Jorel Vargas (implementación: Juan David Polanco) | En esta rama · ver README §16 |
+| [Indicadores derivados de analítica](#7-indicadores-derivados-de-analítica-scrum-39) | SCRUM-39 (131) | Juan David Polanco | En esta rama · ver README §16 |
+| [Gestión de contenidos y ejercicios](#8-gestión-de-contenidos-y-ejercicios-scrum-39) | SCRUM-39 (132) | Juan David Polanco | En esta rama · ver README §17 |
+| [Rendimiento de servicios críticos](#9-rendimiento-de-servicios-críticos-scrum-39) | SCRUM-39 (135) | Jorel Vargas (implementación: Juan David Polanco) | Ejecutado; RNF-02 cumple |
 | Aplicación de la prueba diagnóstica, puntaje y categoría | SCRUM-22, 23, 24 | Jorel Vargas | En `develop` · ver README §12 |
 | Motor de práctica adaptativa | SCRUM-28 a 31 | Juan David Polanco | En `develop` · ver README §13 |
 | [Retroalimentación inmediata y registro de intentos](#4-retroalimentación-inmediata-y-registro-de-intentos-110-114) | 110, 114 | Juan David Polanco | En `develop` · ver README §13 |
@@ -209,11 +212,61 @@ Respuesta: `{ contenido, pagina, tamano, totalElementos, totalPaginas }`. Cada f
 - **Consultas batch:** se evita una consulta por estudiante.
 - **El detalle reutiliza el historial:** la vista del docente usa `<HistorialResultados estudianteId={id} />`.
 
-**Pruebas.** `AnaliticaGrupoControllerTest`: 9 pruebas con Testcontainers (agregaciones, filtros, rango de fechas, permisos, grupo inexistente, grupo vacío, detalle y validaciones). `.\mvnw.cmd verify` → **249 pruebas, 0 fallos**.
+**Pruebas.** `AnaliticaGrupoControllerTest`: 10 pruebas con Testcontainers (agregaciones, derivados, filtros, rango de fechas, permisos, grupo inexistente, grupo vacío, detalle y validaciones). `.\mvnw.cmd verify` → **262 pruebas, 0 fallos**.
 
 **Cómo probarlo a mano.** Crear un grupo con `POST /api/grupos`, inscribir estudiantes, presentar diagnóstico y práctica, y consultar `GET /api/analitica/grupos/{id}` con el token del docente. Probar otro docente (403), un rango de fechas y una competencia.
 
 **Detalle técnico completo:** [`docs/code/indicadores-grupo-docente.md`](code/indicadores-grupo-docente.md).
+
+---
+
+## 7. Indicadores derivados de analítica (SCRUM-39)
+
+**Para qué.** Completar el dashboard del docente con la dimensión más débil, los ejercicios con más errores y la evolución semanal del grupo.
+
+**Cómo funciona.**
+
+- El resumen existente ahora incluye `dimensionMasDebil`, `topEjerciciosErrores` y `evolucionGeneral`.
+- `AnaliticaGrupoRepository` agrega dos consultas batch:
+  - top 5 de ejercicios por errores, agrupando por ejercicio y competencia;
+  - evolución semanal con `DATE_TRUNC('week', creado_en)`.
+- La dimensión más débil se calcula en el servicio a partir de las dimensiones con actividad.
+- Los filtros de competencia y fechas se aplican también a estos indicadores.
+
+**Pruebas.** `AnaliticaGrupoControllerTest.calculaDimensionMasDebilTopDeErroresYEvolucion` verifica orden, dimensión y evolución.
+
+**Detalle técnico completo:** [`docs/code/indicadores-grupo-docente.md`](code/indicadores-grupo-docente.md).
+
+---
+
+## 8. Gestión de contenidos y ejercicios (SCRUM-39)
+
+**Para qué.** Que el docente cree, edite, active, desactive y elimine sus propios contenidos y ejercicios, con confirmación antes de borrar.
+
+**Cómo funciona.**
+
+- `ContenidoController` y `EjercicioController` exponen CRUD completo bajo `/api/contenidos` y `/api/ejercicios`.
+- Todos exigen rol `DOCENTE` y validan que `creado_por` sea el docente autenticado.
+- Los datos semilla son de solo lectura.
+- Se validan opciones A–D, una única correcta, respuestas numéricas y tolerancias.
+- Un ejercicio con intentos no se elimina: responde 409 y la UI ofrece desactivarlo. Si tiene intentos, solo se editan campos que no afectan la calificación histórica.
+- Un contenido con ejercicios tampoco se elimina: responde 409 y se desactiva.
+- El motor ya filtra por `ejercicio.activo` y `contenido.activo`.
+
+**Pruebas.** `ActividadesControllerTest`: 12 pruebas (contenidos, edición de contenido, ejercicio múltiple y numérico, validaciones, código duplicado, permisos, eliminación, desactivación, edición con intentos y uso por el motor). Ejecutar `.\mvnw.cmd verify`.
+
+**Detalle técnico completo:** [`docs/code/gestion-actividades-contenidos.md`](code/gestion-actividades-contenidos.md).
+
+---
+
+## 9. Rendimiento de servicios críticos (SCRUM-39)
+
+**Para qué.** Medir `GET /api/practica/siguiente` y la finalización del diagnóstico con 30 usuarios concurrentes.
+
+Script: `pruebas/rendimiento/k6-practica-diagnostico.js`, ejecutado con k6 en Docker. Umbrales: p95 < 1 s y error rate < 1 % por endpoint.
+
+**Resultado:** ejecutado con 30 VUs durante 1 min. p95 de `siguiente` 20,20 ms y p95 de finalización 20,97 ms; 0 % de errores. RNF-02 se cumple. El detalle y el hallazgo de pool de conexiones corregido están en
+[`docs/code/rendimiento-servicios-criticos.md`](code/rendimiento-servicios-criticos.md).
 
 ---
 

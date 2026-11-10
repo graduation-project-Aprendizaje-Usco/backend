@@ -439,5 +439,42 @@ Solo el docente dueño del grupo puede consultar sus indicadores. El servidor ob
 - **Categorías:** última categoría de diagnóstico finalizado por estudiante (`ALTO_RIESGO`, `RIESGO_MODERADO`, `NIVEL_ADECUADO`) o `SIN_DIAGNOSTICO`.
 - **Estudiante en riesgo:** último diagnóstico `ALTO_RIESGO` o promedio de práctica menor al 50 %. Un estudiante sin actividad se informa con `sinActividad: true` y no se marca en riesgo por ese solo hecho.
 - **Detalle:** incluye las dimensiones del estudiante y el último diagnóstico con sus resultados por competencia. La pantalla reutiliza `GET /api/historial?estudianteId=…` para el historial.
+- **Indicadores derivados:** el resumen agrega `dimensionMasDebil`, `topEjerciciosErrores` (5 ejercicios con más errores) y `evolucionGeneral` (promedio semanal del grupo). Se calculan con los mismos filtros de competencia y fechas.
 
 El contrato y las decisiones de implementación están en [`docs/code/indicadores-grupo-docente.md`](code/indicadores-grupo-docente.md).
+
+## 17. Gestión de contenidos y ejercicios (API)
+
+Solo para `DOCENTE`. Cada docente administra los contenidos y ejercicios que creó (`creado_por`); los datos semilla son de solo lectura. La identidad sale del JWT.
+
+### Contenidos
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/contenidos?asignatura=&competencia=&activo=&q=` | Lista los contenidos propios con su número de ejercicios | 200 · 400 · 401 · 403 |
+| `POST /api/contenidos` | Crea un contenido. Cuerpo: competencia, asignatura, tema, título y descripción | 201 · 400 · 401 · 403 · 409 |
+| `PUT /api/contenidos/{id}` | Edita tema, título y descripción | 200 · 400 · 401 · 403 · 404 |
+| `PATCH /api/contenidos/{id}/estado` | Activa o desactiva. Cuerpo: `{"activo":false}` | 200 · 400 · 401 · 403 · 404 |
+| `DELETE /api/contenidos/{id}` | Elimina un contenido sin ejercicios; si tiene, responde 409 y se desactiva | 204 · 401 · 403 · 404 · 409 |
+
+La competencia y la asignatura de un contenido no se cambian después de crearlo para no romper la coherencia de sus ejercicios.
+
+### Ejercicios
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/ejercicios?contenidoId=&competencia=&nivel=&tipo=&activo=&q=` | Lista los ejercicios propios | 200 · 400 · 401 · 403 |
+| `POST /api/ejercicios` | Crea un ejercicio en un contenido propio | 201 · 400 · 401 · 403 · 404 · 409 · 422 |
+| `PUT /api/ejercicios/{id}` | Edita un ejercicio propio | 200 · 400 · 401 · 403 · 404 · 409 · 422 |
+| `PATCH /api/ejercicios/{id}/estado` | Activa o desactiva. Cuerpo: `{"activo":false}` | 200 · 400 · 401 · 403 · 404 |
+| `DELETE /api/ejercicios/{id}` | Elimina un ejercicio sin intentos; si tiene, responde 409 y se desactiva | 204 · 401 · 403 · 404 · 409 |
+
+Reglas de validación:
+
+- `OPCION_MULTIPLE`: exactamente cuatro opciones A–D y exactamente una correcta; sin respuesta numérica.
+- `NUMERICA`: respuesta y tolerancia obligatorias, tolerancia mayor que cero; sin opciones.
+- Código único; si se omite al crear, se genera uno.
+- Si un ejercicio ya tiene intentos, solo se pueden cambiar enunciado, nivel, pista, explicación y error común. Tipo, opciones, respuesta o contenido quedan bloqueados.
+- El motor de práctica ya filtra ejercicios y contenidos activos; un ejercicio desactivado no aparece en `GET /api/practica/siguiente`.
+
+El detalle técnico está en [`docs/code/gestion-actividades-contenidos.md`](code/gestion-actividades-contenidos.md).

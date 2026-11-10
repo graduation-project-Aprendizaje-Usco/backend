@@ -73,6 +73,12 @@ public class Contenido {
         this.creadoPor = creadoPor;
     }
 
+    public void actualizar(String tema, String titulo, String descripcion) {
+        this.tema = Objects.requireNonNull(tema).trim();
+        this.titulo = Objects.requireNonNull(titulo).trim();
+        this.descripcion = descripcion;
+    }
+
     public void desactivar() {
         this.activo = false;
     }

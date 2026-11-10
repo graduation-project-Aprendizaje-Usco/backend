@@ -9,7 +9,10 @@ public record ResumenGrupoResponse(
         long estudiantesConActividad,
         BigDecimal promedioGeneral,
         List<DimensionGrupoResponse> dimensiones,
+        DimensionGrupoResponse dimensionMasDebil,
         List<DistribucionCategoriaResponse> distribucionCategorias,
         long estudiantesEnRiesgo,
-        List<EstudianteGrupoResponse> estudiantes) {
+        List<EstudianteGrupoResponse> estudiantes,
+        List<EjercicioErroresResponse> topEjerciciosErrores,
+        List<EvolucionSemanalResponse> evolucionGeneral) {
 }

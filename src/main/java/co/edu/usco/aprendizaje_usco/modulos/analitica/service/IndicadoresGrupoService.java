@@ -8,7 +8,9 @@ import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.DiagnosticoEstudianteR
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.DimensionEstudianteResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.DimensionGrupoResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.DistribucionCategoriaResponse;
+import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.EjercicioErroresResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.EstudianteGrupoResponse;
+import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.EvolucionSemanalResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.GrupoInfoResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.ResumenGrupoResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.repository.AnaliticaGrupoRepository;
@@ -29,6 +31,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.IsoFields;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -127,9 +130,12 @@ public class IndicadoresGrupoService {
                 conActividad,
                 promedio(promedios),
                 dimensiones,
+                dimensionMasDebil(dimensiones),
                 distribucion(filas),
                 enRiesgo,
-                filas);
+                filas,
+                topEjercicios(ids, codigoCompetencia, rango),
+                evolucion(ids, codigoCompetencia, rango));
     }
 
     public DetalleEstudianteGrupoResponse detalle(Long docenteId, Long grupoId, Long estudianteId,
@@ -206,14 +212,49 @@ public class IndicadoresGrupoService {
         return new Rango(inicio, fin);
     }
 
+    private List<EjercicioErroresResponse> topEjercicios(List<Long> ids, String competencia, Rango rango) {
+        return analiticaRepository.topEjerciciosErrores(ids, competencia, rango.desde(), rango.hasta(), 5)
+                .stream()
+                .map(ejercicio -> new EjercicioErroresResponse(
+                        ejercicio.ejercicioId(),
+                        ejercicio.codigo(),
+                        ejercicio.enunciado(),
+                        ejercicio.competenciaCodigo(),
+                        ejercicio.competenciaNombre(),
+                        ejercicio.nivel(),
+                        ejercicio.intentos(),
+                        ejercicio.errores(),
+                        porcentaje(ejercicio.errores(), ejercicio.intentos())))
+                .toList();
+    }
+
+    private List<EvolucionSemanalResponse> evolucion(List<Long> ids, String competencia, Rango rango) {
+        return analiticaRepository.evolucionSemanal(ids, competencia, rango.desde(), rango.hasta()).stream()
+                .map(semana -> new EvolucionSemanalResponse(
+                        semana.fechaInicio().get(IsoFields.WEEK_BASED_YEAR),
+                        semana.fechaInicio().get(IsoFields.WEEK_OF_WEEK_BASED_YEAR),
+                        semana.fechaInicio(),
+                        semana.intentos(),
+                        semana.aciertos(),
+                        porcentaje(semana.aciertos(), semana.intentos())))
+                .toList();
+    }
+
+    private static DimensionGrupoResponse dimensionMasDebil(List<DimensionGrupoResponse> dimensiones) {
+        return dimensiones.stream()
+                .filter(dimension -> dimension.promedio() != null)
+                .min(Comparator.comparing(DimensionGrupoResponse::promedio))
+                .orElse(null);
+    }
+
     private static ResumenGrupoResponse resumenVacio(Grupo grupo, List<Competencia> competencias) {
         List<DimensionGrupoResponse> dimensiones = competencias.stream()
                 .map(c -> new DimensionGrupoResponse(c.getCodigo(), c.getNombre(), null, 0, 0, 0))
                 .toList();
         return new ResumenGrupoResponse(
                 new GrupoInfoResponse(grupo.getId(), grupo.getCodigo(), grupo.getNombre()),
-                0, 0, null, dimensiones,
-                distribucion(List.of()), 0, List.of());
+                0, 0, null, dimensiones, null,
+                distribucion(List.of()), 0, List.of(), List.of(), List.of());
     }
 
     private static EstudianteGrupoResponse fila(
