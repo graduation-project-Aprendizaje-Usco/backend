@@ -24,6 +24,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     boolean existsByCorreo(String correo);
 
+    long countByRol_Nombre(NombreRol rol);
+
+    long countByRol_NombreAndEstado(NombreRol rol, EstadoUsuario estado);
+
     /**
      * Lista del administrador. Cada filtro es opcional (null = sin filtro);
      * {@code texto} llega ya en minúsculas y con comodines ("%ana%").

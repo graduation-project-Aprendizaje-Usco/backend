@@ -3,8 +3,11 @@ package co.edu.usco.aprendizaje_usco.modulos.usuario.service;
 import co.edu.usco.aprendizaje_usco.common.exception.ConflictoException;
 import co.edu.usco.aprendizaje_usco.common.exception.RecursoNoEncontradoException;
 import co.edu.usco.aprendizaje_usco.common.exception.ReglaNegocioException;
+import co.edu.usco.aprendizaje_usco.modulos.contenido.repository.ContenidoRepository;
+import co.edu.usco.aprendizaje_usco.modulos.contenido.repository.EjercicioRepository;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.ActualizarUsuarioRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.RegistroRequest;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.ResumenAdminResponse;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.UsuarioAdminRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.UsuarioAdminResponse;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.UsuarioCreadoResponse;
@@ -13,9 +16,11 @@ import co.edu.usco.aprendizaje_usco.modulos.usuario.model.NombreRol;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.ProgramaAcademico;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Rol;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Usuario;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.GrupoRepository;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.RolRepository;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.UsuarioRepository;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,14 +37,33 @@ public class AdminUsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
+    private final GrupoRepository grupoRepository;
+    private final ContenidoRepository contenidoRepository;
+    private final EjercicioRepository ejercicioRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecureRandom aleatorio = new SecureRandom();
 
     public AdminUsuarioService(UsuarioRepository usuarioRepository, RolRepository rolRepository,
-                               PasswordEncoder passwordEncoder) {
+                               GrupoRepository grupoRepository, ContenidoRepository contenidoRepository,
+                               EjercicioRepository ejercicioRepository, PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
+        this.grupoRepository = grupoRepository;
+        this.contenidoRepository = contenidoRepository;
+        this.ejercicioRepository = ejercicioRepository;
         this.passwordEncoder = passwordEncoder;
+    }
+
+    /** Conteos del panel del administrador (SCRUM-46). */
+    @Transactional(readOnly = true)
+    public ResumenAdminResponse resumen() {
+        List<ResumenAdminResponse.UsuariosPorRol> porRol = Arrays.stream(NombreRol.values())
+                .map(rol -> new ResumenAdminResponse.UsuariosPorRol(rol,
+                        usuarioRepository.countByRol_Nombre(rol),
+                        usuarioRepository.countByRol_NombreAndEstado(rol, EstadoUsuario.ACTIVO)))
+                .toList();
+        return new ResumenAdminResponse(porRol, grupoRepository.count(),
+                contenidoRepository.countByActivoTrue(), ejercicioRepository.countByActivoTrueAndContenidoActivoTrue());
     }
 
     @Transactional(readOnly = true)

@@ -18,7 +18,8 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 | Motor de práctica adaptativa | SCRUM-28 a 31 | Juan David Polanco | En `develop` · ver README §13 |
 | [Retroalimentación inmediata y registro de intentos](#4-retroalimentación-inmediata-y-registro-de-intentos-110-114) | 110, 114 | Juan David Polanco | En `develop` · ver README §13 |
 | Grupos docente–estudiante | SCRUM-159 | Fernando Pérez | En `develop` |
-| [Administración de usuarios](#10-administración-de-usuarios-scrum-45) | SCRUM-45 (108) | Jorel Vargas (implementación: Nicolás Pérez) | En `feature/administracion-usuarios` |
+| [Administración de usuarios](#10-administración-de-usuarios-scrum-45) | SCRUM-45 (108) | Jorel Vargas (implementación: Nicolás Pérez) | En `develop` |
+| [Panel del administrador](#11-panel-del-administrador-scrum-46) | SCRUM-46 | Fernando Pérez (implementación: Nicolás Pérez) | En `feature/panel-administracion` |
 
 ---
 
@@ -304,6 +305,21 @@ Sin token responde 401 y con otro rol, 403.
 - El administrador no puede desactivarse ni quitarse el rol.
 
 **Cómo probarlo a mano.** Swagger → login con `admin@aprendizaje.test` / `Admin2026*` → **Authorize** → `POST /api/admin/usuarios` con un docente nuevo; luego iniciar sesión con la contraseña temporal que devuelve.
+
+## 11. Panel del administrador (SCRUM-46)
+
+**Para qué.** Que el administrador vea de un vistazo cuántos usuarios hay por rol, cuántos grupos y cuántas actividades activas.
+
+**Endpoint:** `GET /api/admin/resumen` (solo ADMIN) → `{ usuariosPorRol: [{ rol, total, activos }], grupos, contenidosActivos, ejerciciosActivos }`.
+
+**Decisiones.**
+
+- **Grupos:** se cuentan todos, porque la tabla `grupo` no tiene estado activo o inactivo.
+- **Ejercicios activos:** los que el motor puede asignar, es decir, el ejercicio activo y su contenido activo (el mismo criterio que `findActivosPorAsignatura`).
+- **Consultas derivadas de Spring Data** (`countByRol_NombreAndEstado`, `countByActivoTrue`…): con tres roles son seis conteos pequeños, y no hace falta una consulta a mano.
+- En el backlog figura como tarea solo de frontend, pero el administrador no tenía forma de consultar contenidos ni ejercicios (esos endpoints son del docente). Por eso hizo falta este endpoint.
+
+**Pruebas.** En `AdminUsuarioControllerTest`: 403 para otro rol; un estudiante inactivo nuevo suma al total pero no a los activos; un grupo nuevo suma 1; los conteos de actividades coinciden con una consulta SQL directa.
 
 ---
 

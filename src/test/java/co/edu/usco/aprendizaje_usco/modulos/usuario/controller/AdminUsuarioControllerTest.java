@@ -9,11 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import co.edu.usco.aprendizaje_usco.TestcontainersConfiguration;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.GrupoRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.NombreRol;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Rol;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Usuario;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.RolRepository;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.UsuarioRepository;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.service.GrupoService;
 import co.edu.usco.aprendizaje_usco.security.JwtService;
 import co.edu.usco.aprendizaje_usco.security.UsuarioAutenticado;
 import com.jayway.jsonpath.JsonPath;
@@ -24,6 +26,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -47,6 +50,12 @@ class AdminUsuarioControllerTest {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private GrupoService grupoService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private Usuario admin;
     private Usuario docente;
@@ -174,6 +183,39 @@ class AdminUsuarioControllerTest {
         Usuario guardado = usuarioRepository.findByCorreo("ada.admin@usco.edu.co").orElseThrow();
         assertThat(guardado.estaActivo()).isTrue();
         assertThat(guardado.getRol().getNombre()).isEqualTo(NombreRol.ADMIN);
+    }
+
+    @Test
+    void elResumenCuentaUsuariosPorRolGruposYActividadesActivas() throws Exception {
+        mockMvc.perform(get("/api/admin/resumen").header("Authorization", bearer(docente)))
+                .andExpect(status().isForbidden());
+        String antes = mockMvc.perform(get("/api/admin/resumen").header("Authorization", bearer(admin)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Usuario inactivo = guardar("Ina", "Activa", "u20250000009@usco.edu.co", NombreRol.ESTUDIANTE);
+        inactivo.desactivar();
+        usuarioRepository.saveAndFlush(inactivo);
+        grupoService.crear(docente.getId(), new GrupoRequest("RESUMEN-1", "Grupo del resumen"));
+
+        String despues = mockMvc.perform(get("/api/admin/resumen").header("Authorization", bearer(admin)))
+                .andReturn().getResponse().getContentAsString();
+        String estudiantes = "$.usuariosPorRol[?(@.rol == 'ESTUDIANTE')]";
+        assertThat(primero(despues, estudiantes + ".total")).isEqualTo(primero(antes, estudiantes + ".total") + 1);
+        assertThat(primero(despues, estudiantes + ".activos")).isEqualTo(primero(antes, estudiantes + ".activos"));
+        assertThat((Integer) JsonPath.read(despues, "$.grupos")).isEqualTo((Integer) JsonPath.read(antes, "$.grupos") + 1);
+        // Mismo criterio que el motor: el ejercicio y su contenido activos.
+        assertThat(((Number) JsonPath.read(despues, "$.ejerciciosActivos")).longValue()).isEqualTo(jdbcTemplate.queryForObject("""
+                select count(*) from ejercicio e join contenido c on c.id = e.contenido_id
+                where e.activo and c.activo""", Long.class));
+        assertThat(((Number) JsonPath.read(despues, "$.contenidosActivos")).longValue())
+                .isEqualTo(jdbcTemplate.queryForObject("select count(*) from contenido where activo", Long.class));
+    }
+
+    /** Un filtro de JsonPath devuelve una lista: toma el único valor. */
+    private static int primero(String json, String ruta) {
+        java.util.List<Integer> valores = JsonPath.read(json, ruta);
+        return valores.get(0);
     }
 
     private static MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder peticion, String cuerpo) {
