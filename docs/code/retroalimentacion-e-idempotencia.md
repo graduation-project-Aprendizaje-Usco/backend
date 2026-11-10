@@ -24,7 +24,7 @@ Este documento describe el trabajo de las tareas 110 y 114: qué se construyó, 
 | **115 — Servicio de registro transaccional** | El intento y la actualización de nivel se guardan en la misma transacción; una prueba verifica el rollback |
 | **116 — Protección contra envíos duplicados** | Clave UUID por intento, restricción única y bloqueo del usuario para envíos simultáneos |
 
-**Verificación:** `.\mvnw.cmd verify` → **216 pruebas, 0 fallos**; frontend `npm test` → **55 pruebas**, `npm run lint` y `npm run build` sin errores.
+**Verificación:** `.\mvnw.cmd verify` → **262 pruebas, 0 fallos**; frontend `npm test` → **106 pruebas**, `npm run lint` y `npm run build` sin errores.
 
 ---
 
@@ -295,7 +295,7 @@ Comando:
 .\mvnw.cmd verify
 ```
 
-Resultado esperado: **216 pruebas, 0 fallos, 0 errores**. Requiere Docker Desktop para Testcontainers.
+Resultado esperado: **262 pruebas, 0 fallos, 0 errores**. Requiere Docker Desktop para Testcontainers.
 
 ### 8.2 Frontend
 
@@ -305,7 +305,7 @@ npm run lint
 npm run build
 ```
 
-Resultado esperado: **55 pruebas**, lint y build sin errores.
+Resultado esperado: **106 pruebas**, lint y build sin errores.
 
 Las pruebas del panel comprueban la etiqueta “Pista”/“Explicación”, el error común, el foco, el aviso de último intento y que no se muestre nada si el backend no envía retroalimentación. Las de la página comprueban el segundo fallo, el uso de una clave nueva para el segundo intento y que el reintento de red conserve la misma clave.
 

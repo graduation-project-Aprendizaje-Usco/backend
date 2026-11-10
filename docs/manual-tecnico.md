@@ -149,7 +149,10 @@ Todas las rutas empiezan por `/api`. Las únicas públicas son `POST /auth/login
 | practica | `POST /practica/intentos` | ESTUDIANTE | Registra un intento (idempotente) |
 | progreso | `GET /progreso/me` | ESTUDIANTE | Indicadores de progreso del estudiante: intentos, ejercicios completados, nivel general y por competencia, variación frente al diagnóstico y tendencia semanal (README §15) |
 | progreso | `GET /historial` | ESTUDIANTE, DOCENTE | Historial de resultados con filtros; el docente solo ve estudiantes de sus grupos |
-| analitica | — | DOCENTE | Indicadores de grupo: pendiente (SCRUM-39) |
+| analitica | `GET /analitica/grupos/{grupoId}` | DOCENTE | Resumen del grupo: promedios, distribución de categorías, riesgo y estudiantes (SCRUM-39) |
+| analitica | `GET /analitica/grupos/{grupoId}/estudiantes/{estudianteId}` | DOCENTE | Detalle del estudiante dentro del grupo (SCRUM-39) |
+| contenido | `GET/POST /contenidos` y `PUT/PATCH/DELETE /contenidos/{id}` | DOCENTE | CRUD de contenidos propios (SCRUM-39) |
+| contenido | `GET/POST /ejercicios` y `PUT/PATCH/DELETE /ejercicios/{id}` | DOCENTE | CRUD de ejercicios propios (SCRUM-39) |
 
 `GET /api/ping/{rol}` solo existe con los perfiles `dev` y `test`, para probar el acceso por rol.
 

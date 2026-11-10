@@ -20,6 +20,8 @@ public interface IntentoPracticaRepository extends JpaRepository<IntentoPractica
 
     long countByUsuarioIdAndEjercicioId(Long usuarioId, Long ejercicioId);
 
+    boolean existsByEjercicioId(Long ejercicioId);
+
     boolean existsByUsuarioIdAndEjercicioIdAndNumeroIntentoAndEsCorrectaTrue(
             Long usuarioId, Long ejercicioId, int numeroIntento);
 

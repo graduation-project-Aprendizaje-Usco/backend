@@ -1,6 +1,7 @@
 package co.edu.usco.aprendizaje_usco.modulos.contenido.model;
 
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Usuario;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -88,7 +89,8 @@ public class Ejercicio {
     @Column(name = "actualizado_en", nullable = false)
     private Instant actualizadoEn;
 
-    @OneToMany(mappedBy = "ejercicio", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "ejercicio", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("letra ASC")
     private List<OpcionEjercicio> opciones = new ArrayList<>();
 
@@ -114,6 +116,32 @@ public class Ejercicio {
 
     public void agregarOpcion(OpcionEjercicio opcion) {
         opciones.add(opcion);
+    }
+
+    public void reemplazarOpciones(List<OpcionEjercicio> nuevas) {
+        opciones.clear();
+        opciones.addAll(nuevas);
+    }
+
+    public void actualizarContenido(Contenido contenido) {
+        this.contenido = Objects.requireNonNull(contenido);
+        this.competencia = contenido.getCompetencia();
+    }
+
+    public void actualizarTipoRespuesta(TipoEjercicio tipo, BigDecimal respuestaNumerica, BigDecimal tolerancia) {
+        this.tipo = Objects.requireNonNull(tipo);
+        this.respuestaNumerica = respuestaNumerica;
+        this.tolerancia = tolerancia;
+    }
+
+    public void actualizarDatos(String enunciado, NivelDificultad nivel, String pista, String explicacion,
+                                String errorComun, Usuario actualizadoPor) {
+        this.enunciado = Objects.requireNonNull(enunciado).trim();
+        this.nivel = Objects.requireNonNull(nivel);
+        this.pista = Objects.requireNonNull(pista).trim();
+        this.explicacion = Objects.requireNonNull(explicacion).trim();
+        this.errorComun = errorComun;
+        this.actualizadoPor = actualizadoPor;
     }
 
     public Optional<OpcionEjercicio> opcionCorrecta() {
