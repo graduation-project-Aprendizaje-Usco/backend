@@ -19,7 +19,9 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 | [Retroalimentación inmediata y registro de intentos](#4-retroalimentación-inmediata-y-registro-de-intentos-110-114) | 110, 114 | Juan David Polanco | En `develop` · ver README §13 |
 | Grupos docente–estudiante | SCRUM-159 | Fernando Pérez | En `develop` |
 | [Administración de usuarios](#10-administración-de-usuarios-scrum-45) | SCRUM-45 (108) | Jorel Vargas (implementación: Nicolás Pérez) | En `develop` |
-| [Panel del administrador](#11-panel-del-administrador-scrum-46) | SCRUM-46 | Fernando Pérez (implementación: Nicolás Pérez) | En `feature/panel-administracion` |
+| [Panel del administrador](#11-panel-del-administrador-scrum-46) | SCRUM-46 | Fernando Pérez (implementación: Nicolás Pérez) | En `develop` · verificado |
+| [Vistas de administración de grupos y actividades](#12-vistas-de-administración-de-grupos-y-actividades-scrum-46) | SCRUM-46 | Fernando Pérez (implementación: Nicolás Pérez) | En `develop` |
+| [Integración end-to-end de los módulos](#13-integración-end-to-end-de-los-módulos-140) | 140 | Juan David Polanco | Verificado en local; staging pendiente |
 
 ---
 
@@ -318,11 +320,45 @@ Sin token responde 401 y con otro rol, 403.
 - **Ejercicios activos:** los que el motor puede asignar, es decir, el ejercicio activo y su contenido activo (el mismo criterio que `findActivosPorAsignatura`).
 - **Consultas derivadas de Spring Data** (`countByRol_NombreAndEstado`, `countByActivoTrue`…): con tres roles son seis conteos pequeños, y no hace falta una consulta a mano.
 - En el backlog figura como tarea solo de frontend, pero el administrador no tenía forma de consultar contenidos ni ejercicios (esos endpoints son del docente). Por eso hizo falta este endpoint.
+- **Enlaces a las pantallas de gestión:** el panel enlaza a Usuarios, Grupos y Actividades; las dos últimas son vistas de solo lectura (sección 12).
 
 **Pruebas.** En `AdminUsuarioControllerTest`: 403 para otro rol; un estudiante inactivo nuevo suma al total pero no a los activos; un grupo nuevo suma 1; los conteos de actividades coinciden con una consulta SQL directa.
+
+## 12. Vistas de administración de grupos y actividades (SCRUM-46)
+
+**Para qué.** Que el administrador no solo vea los conteos del panel, sino que pueda consultar los grupos de los docentes y el catálogo de contenidos y ejercicios.
+
+**Endpoints.**
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/grupos` | Lista todos los grupos cuando el token es ADMIN (para el docente, solo los suyos) | 200 · 401 · 403 |
+| `GET /api/grupos/{id}/estudiantes` | Estudiantes inscritos en un grupo; ADMIN puede consultar cualquiera | 200 · 401 · 403 · 404 |
+| `GET /api/admin/actividades` | Catálogo de contenidos y ejercicios de todos los docentes, sin claves ni explicaciones | 200 · 401 · 403 |
+
+**Decisiones.**
+
+- **Grupos sin endpoint nuevo:** el controlador de grupos ya permitía ADMIN; se reutiliza para la vista de solo lectura. El administrador no crea ni elimina grupos.
+- **Actividades sin respuestas correctas:** el DTO `AdminActividadesResponse` omite opciones, respuesta numérica, pista y explicación. El administrador consulta la gestión, pero no recibe las claves.
+- **Datos semilla:** los contenidos y ejercicios con `creado_por = null` se muestran como “Semilla”.
+
+**Archivos.** `modulos/contenido/controller/AdminActividadesController.java`, `service/AdminActividadesService.java`, `dto/AdminActividadesResponse.java` y las consultas `findAllParaAdmin` de los repositorios de contenidos y ejercicios.
+
+**Pruebas.** `AdminActividadesControllerTest`: 401 sin token, 403 para DOCENTE y ESTUDIANTE, catálogo completo y ausencia de claves. `GrupoControllerTest` ya cubre el acceso ADMIN a los grupos.
+
+## 13. Integración end-to-end de los módulos (140)
+
+**Para qué.** Comprobar que los módulos comparten usuarios, roles y datos, y que los tres flujos completos funcionan sin intervención manual en la base.
+
+**Prueba automatizada.** `FlujosCompletosE2ETest` usa Testcontainers, MockMvc y login real:
+- Administrador: crea docente y estudiante con contraseña temporal, los desactiva y reactiva, y consulta panel y catálogo.
+- Docente: crea un grupo, inscribe al estudiante y consulta su analítica e historial.
+- Estudiante: presenta los 24 ítems del diagnóstico, resuelve tres ejercicios de práctica y consulta progreso e historial.
+
+**Validación manual.** `docs/pruebas/e2e-sprint-4.md` deja el guion y el resultado local. **Staging queda pendiente de #33**: el criterio de aceptación de #140 se cierra cuando exista el entorno y se repita el mismo recorrido.
 
 ---
 
 ## Pendientes conocidos
 
-- **Staging (SCRUM-13):** sin él, la verificación manual y las pruebas con usuarios piloto se hacen en local.
+- **Staging (SCRUM-13):** sin él, la verificación manual y las pruebas con usuarios piloto se hacen en local. La integración end-to-end (#140) quedó verificada en local y pendiente de repetirse en staging.

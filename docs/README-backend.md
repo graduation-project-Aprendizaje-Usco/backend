@@ -478,3 +478,18 @@ Reglas de validación:
 - El motor de práctica ya filtra ejercicios y contenidos activos; un ejercicio desactivado no aparece en `GET /api/practica/siguiente`.
 
 El detalle técnico está en [`docs/code/gestion-actividades-contenidos.md`](code/gestion-actividades-contenidos.md).
+
+## 18. Administración de usuarios y panel (API)
+
+Solo para `ADMIN`.
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/admin/usuarios?buscar=&rol=&estado=` | Lista usuarios con búsqueda y filtros opcionales | 200 · 401 · 403 |
+| `POST /api/admin/usuarios` | Crea un usuario y devuelve una contraseña temporal | 201 · 400 · 401 · 403 · 409 · 422 |
+| `PUT /api/admin/usuarios/{id}` | Edita nombres, apellidos, rol y programa; no cambia el correo | 200 · 400 · 401 · 403 · 404 · 422 |
+| `PATCH /api/admin/usuarios/{id}/estado` | Activa o desactiva. Cuerpo: `{"estado":"INACTIVO"}` | 200 · 400 · 401 · 403 · 404 · 422 |
+| `GET /api/admin/resumen` | Conteos de usuarios por rol, grupos, contenidos y ejercicios activos | 200 · 401 · 403 |
+| `GET /api/admin/actividades` | Catálogo de contenidos y ejercicios de todos los docentes, sin claves ni explicaciones | 200 · 401 · 403 |
+
+El administrador no puede desactivarse ni quitarse el rol ADMIN. Un usuario INACTIVO no puede iniciar sesión. Los grupos y sus estudiantes se consultan con `GET /api/grupos` y `GET /api/grupos/{id}/estudiantes`, que admiten ADMIN.

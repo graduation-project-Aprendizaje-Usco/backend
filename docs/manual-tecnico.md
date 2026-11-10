@@ -141,6 +141,7 @@ Todas las rutas empiezan por `/api`. Las únicas públicas son `POST /auth/login
 | usuario (grupos) | `POST /grupos/{id}/estudiantes` | DOCENTE, ADMIN | Inscribe un estudiante por su correo |
 | usuario (administración) | `GET/POST /admin/usuarios`, `PUT /admin/usuarios/{id}` y `PATCH /admin/usuarios/{id}/estado` | ADMIN | Listar con búsqueda y filtros, crear con contraseña temporal, editar el rol y activar o desactivar (SCRUM-45) |
 | usuario (administración) | `GET /admin/resumen` | ADMIN | Conteos del panel: usuarios por rol, grupos y actividades activas (SCRUM-46) |
+| contenido (administración) | `GET /admin/actividades` | ADMIN | Catálogo de contenidos y ejercicios de todos los docentes, sin claves ni explicaciones (SCRUM-46) |
 | diagnostico | `POST /diagnosticos/intentos` | ESTUDIANTE | Inicia la prueba |
 | diagnostico | `GET /diagnosticos/intentos/actual` | ESTUDIANTE | Intento en curso o finalizado |
 | diagnostico | `GET /diagnosticos/intentos/{id}` | ESTUDIANTE | Ítems y respuestas guardadas |
