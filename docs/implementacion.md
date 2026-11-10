@@ -10,10 +10,10 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 | [Control de acceso por rol](#2-control-de-acceso-por-rol-scrum-12) | SCRUM-12 | Fernando Pérez (integración: Nicolás Pérez) | En `develop` |
 | [Pruebas del diagnóstico](#3-pruebas-del-módulo-de-diagnóstico-scrum-27) | SCRUM-27 | Nicolás Pérez | En `develop` (falta la evidencia manual) |
 | [Historial de resultados](#5-historial-de-resultados-scrum-41) | SCRUM-41 (168) | Nicolás Pérez | En `develop` |
-| [Indicadores de grupo para el docente](#6-indicadores-de-grupo-para-el-docente-scrum-39) | SCRUM-39 (123) | Jorel Vargas (implementación: Juan David Polanco) | En esta rama · ver README §16 |
-| [Indicadores derivados de analítica](#7-indicadores-derivados-de-analítica-scrum-39) | SCRUM-39 (131) | Juan David Polanco | En esta rama · ver README §16 |
-| [Gestión de contenidos y ejercicios](#8-gestión-de-contenidos-y-ejercicios-scrum-39) | SCRUM-39 (132) | Juan David Polanco | En esta rama · ver README §17 |
-| [Rendimiento de servicios críticos](#9-rendimiento-de-servicios-críticos-scrum-39) | SCRUM-39 (135) | Jorel Vargas (implementación: Juan David Polanco) | Ejecutado; RNF-02 cumple |
+| [Indicadores de grupo para el docente](#6-indicadores-de-grupo-para-el-docente-scrum-39) | SCRUM-39 (123) | Jorel Vargas (implementación: Juan David Polanco) | En `develop` · ver README §16 |
+| [Indicadores derivados de analítica](#7-indicadores-derivados-de-analítica-scrum-42) | SCRUM-42 (131) | Juan David Polanco | En `develop` · ver README §16 |
+| [Gestión de contenidos y ejercicios](#8-gestión-de-contenidos-y-ejercicios-scrum-43) | SCRUM-43 (132) | Juan David Polanco | En `develop` · ver README §17 |
+| [Rendimiento de servicios críticos](#9-rendimiento-de-servicios-críticos-scrum-44) | SCRUM-44 (135) | Jorel Vargas (implementación: Juan David Polanco) | Ejecutado; RNF-02 cumple |
 | Aplicación de la prueba diagnóstica, puntaje y categoría | SCRUM-22, 23, 24 | Jorel Vargas | En `develop` · ver README §12 |
 | Motor de práctica adaptativa | SCRUM-28 a 31 | Juan David Polanco | En `develop` · ver README §13 |
 | [Retroalimentación inmediata y registro de intentos](#4-retroalimentación-inmediata-y-registro-de-intentos-110-114) | 110, 114 | Juan David Polanco | En `develop` · ver README §13 |
@@ -220,7 +220,7 @@ Respuesta: `{ contenido, pagina, tamano, totalElementos, totalPaginas }`. Cada f
 
 ---
 
-## 7. Indicadores derivados de analítica (SCRUM-39)
+## 7. Indicadores derivados de analítica (SCRUM-42)
 
 **Para qué.** Completar el dashboard del docente con la dimensión más débil, los ejercicios con más errores y la evolución semanal del grupo.
 
@@ -239,7 +239,7 @@ Respuesta: `{ contenido, pagina, tamano, totalElementos, totalPaginas }`. Cada f
 
 ---
 
-## 8. Gestión de contenidos y ejercicios (SCRUM-39)
+## 8. Gestión de contenidos y ejercicios (SCRUM-43)
 
 **Para qué.** Que el docente cree, edite, active, desactive y elimine sus propios contenidos y ejercicios, con confirmación antes de borrar.
 
@@ -259,7 +259,7 @@ Respuesta: `{ contenido, pagina, tamano, totalElementos, totalPaginas }`. Cada f
 
 ---
 
-## 9. Rendimiento de servicios críticos (SCRUM-39)
+## 9. Rendimiento de servicios críticos (SCRUM-44)
 
 **Para qué.** Medir `GET /api/practica/siguiente` y la finalización del diagnóstico con 30 usuarios concurrentes.
 
