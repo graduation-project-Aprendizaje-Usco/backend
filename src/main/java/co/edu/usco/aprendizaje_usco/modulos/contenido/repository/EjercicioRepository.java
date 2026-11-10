@@ -37,6 +37,9 @@ public interface EjercicioRepository extends JpaRepository<Ejercicio, Long> {
 
     long countByCreadoPorIsNull();
 
+    /** Activos para el motor: el ejercicio y su contenido (mismo criterio que findActivosPorAsignatura). */
+    long countByActivoTrueAndContenidoActivoTrue();
+
     long countByCreadoPorIsNullAndContenidoAsignatura(String asignatura);
 
     @Query("""

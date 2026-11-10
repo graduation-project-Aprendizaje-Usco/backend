@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface ContenidoRepository extends JpaRepository<Contenido, Long> {
 
+    long countByActivoTrue();
+
     Optional<Contenido> findByAsignaturaAndTemaAndTitulo(String asignatura, String tema, String titulo);
 
     @EntityGraph(attributePaths = "competencia")
