@@ -18,6 +18,7 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 | Motor de práctica adaptativa | SCRUM-28 a 31 | Juan David Polanco | En `develop` · ver README §13 |
 | [Retroalimentación inmediata y registro de intentos](#4-retroalimentación-inmediata-y-registro-de-intentos-110-114) | 110, 114 | Juan David Polanco | En `develop` · ver README §13 |
 | Grupos docente–estudiante | SCRUM-159 | Fernando Pérez | En `develop` |
+| [Administración de usuarios](#10-administración-de-usuarios-scrum-45) | SCRUM-45 (108) | Jorel Vargas (implementación: Nicolás Pérez) | En `feature/administracion-usuarios` |
 
 ---
 
@@ -267,6 +268,42 @@ Script: `pruebas/rendimiento/k6-practica-diagnostico.js`, ejecutado con k6 en Do
 
 **Resultado:** ejecutado con 30 VUs durante 1 min. p95 de `siguiente` 20,20 ms y p95 de finalización 20,97 ms; 0 % de errores. RNF-02 se cumple. El detalle y el hallazgo de pool de conexiones corregido están en
 [`docs/code/rendimiento-servicios-criticos.md`](code/rendimiento-servicios-criticos.md).
+
+## 10. Administración de usuarios (SCRUM-45)
+
+**Para qué.** Que el administrador cree, edite, cambie el rol y desactive cuentas (RF-13).
+
+**Endpoints** (`/api/admin/usuarios`, solo ADMIN):
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/admin/usuarios?buscar&rol&estado` | Lista con búsqueda en nombres, apellidos y correo, y filtros por rol y estado (todos opcionales) | 200 |
+| `POST /api/admin/usuarios` | Crea el usuario y devuelve `{ usuario, passwordTemporal }` | 201 · 400 campos · 409 correo repetido · 422 estudiante sin correo de estudiante o sin programa |
+| `PUT /api/admin/usuarios/{id}` | Cambia nombres, apellidos, rol y programa (el correo no se cambia) | 200 · 404 · 422 si el administrador se quita su propio rol |
+| `PATCH /api/admin/usuarios/{id}/estado` | `{ "estado": "ACTIVO" \| "INACTIVO" }` | 200 · 404 · 422 si el administrador se desactiva a sí mismo |
+
+Sin token responde 401 y con otro rol, 403.
+
+**Archivos:** `modulos/usuario/controller/AdminUsuarioController.java`, `service/AdminUsuarioService.java`, `repository/UsuarioRepository.buscarParaAdmin`, `dto/UsuarioAdminRequest`, `ActualizarUsuarioRequest`, `EstadoUsuarioRequest`, `UsuarioAdminResponse` y `UsuarioCreadoResponse`.
+
+**Decisiones.**
+
+- **Contraseña temporal:** 12 caracteres al azar (`SecureRandom`), sin letras ni números que se confundan (0/O, 1/l/I). Cumple la regla del registro (letra y número). Solo viaja en la respuesta de creación; en la base queda el hash BCrypt.
+- **Mismas reglas que el registro para estudiantes:** correo `u` + 11 dígitos + `@usco.edu.co` y programa de la lista. Docentes y administradores no llevan programa.
+- **El administrador no puede desactivarse ni quitarse el rol ADMIN:** se quedaría sin acceso a esta pantalla.
+- **No se borran usuarios:** se desactivan, y así se conservan sus intentos y resultados.
+- **Un usuario desactivado no inicia sesión** (ya lo garantizaba `UsuarioDetailsService`). Un token emitido antes de desactivarlo sigue valiendo hasta que vence (README §11).
+
+**Pruebas.** `AdminUsuarioControllerTest`: 7 pruebas.
+- Permisos: 401 sin token y 403 para docente y estudiante en los 4 endpoints.
+- Búsqueda y filtros.
+- Creación con contraseña temporal que sirve para iniciar sesión.
+- Correo repetido (409) y estudiante inválido (422).
+- Edición del rol.
+- Usuario desactivado que no puede iniciar sesión y vuelve a poder al reactivarlo.
+- El administrador no puede desactivarse ni quitarse el rol.
+
+**Cómo probarlo a mano.** Swagger → login con `admin@aprendizaje.test` / `Admin2026*` → **Authorize** → `POST /api/admin/usuarios` con un docente nuevo; luego iniciar sesión con la contraseña temporal que devuelve.
 
 ---
 
