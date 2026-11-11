@@ -1,4 +1,4 @@
-# Implementación del backend
+﻿# Implementación del backend
 
 Qué se ha construido, para qué sirve, qué decisiones se tomaron y cómo probarlo, **historia por historia**. Complementa al [README](README-backend.md) (cómo correr el proyecto y las convenciones) y a [tareas-y-responsables.md](tareas-y-responsables.md) (qué pide cada tarea). La parte visual está en `docs/implementacion.md` del frontend.
 
@@ -25,6 +25,10 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 | [Pruebas funcionales CA-01 a CA-16](#14-pruebas-funcionales-ca-01-a-ca-16-141) | 141 | Fernando Pérez | 16/16 cumplen con evidencia automatizada; revisión visual pendiente |
 | [Corrección de incidencias](#15-corrección-de-incidencias-142) | 142 | Juan David Polanco | Sin defectos altos abiertos; INC-01 corregida |
 | [Validación con usuarios piloto](#16-validación-con-usuarios-piloto-143) | 143 | Juan David Polanco | Protocolo y simulación interna listos; usuarios reales pendientes |
+| [Hardening de seguridad por rol](#17-hardening-de-seguridad-por-rol-148) | 148 | Jorel Vargas | Matriz endpoint × rol y cabeceras de seguridad implementadas |
+| [Prueba de concurrencia](#18-prueba-de-concurrencia-149) | 149 | Fernando Pérez | 50 envíos simultáneos verificados |
+| [Registro de estudiantes por invitación](#19-registro-de-estudiantes-por-invitación-150) | 150 | Jorel Vargas | Implementado en backend y frontend |
+| [Documentación técnica de la entrega](#20-documentación-técnica-de-la-entrega-146) | 146 | Nicolás Pérez | Arquitectura as-built, despliegue y guía de instalación |
 
 ---
 
@@ -367,7 +371,7 @@ Sin token responde 401 y con otro rol, 403.
 - CA-01..CA-16 se mapearon a RF-01..RF-16.
 - La matriz detallada está en [`docs/pruebas/matriz-aceptacion-ca.md`](pruebas/matriz-aceptacion-ca.md).
 - Resultado local: **16/16 cumplen** con evidencia automatizada y revisión de código.
-- Backend: `.\mvnw.cmd verify` → **274 pruebas, 0 fallos**.
+- Backend: `.\mvnw.cmd verify` → **285 pruebas, 0 fallos**.
 - Frontend: `npm run lint`, `npm test` → **122 pruebas**, y `npm run build`.
 - La revisión visual y con usuarios reales queda para #143.
 
@@ -389,6 +393,39 @@ Sin token responde 401 y con otro rol, 403.
 - Observaciones: [`docs/pruebas/observaciones-piloto.md`](pruebas/observaciones-piloto.md).
 - Se ejecutó una **simulación técnica interna** con las pruebas E2E y de componente; no sustituye a los usuarios reales.
 - **Pendiente manual:** reclutar 4–6 participantes, firmar consentimientos, ejecutar las sesiones, aplicar el SUS (#144) y repetir en staging.
+
+## 17. Hardening de seguridad por rol (148)
+
+**Para qué.** Revisar autenticación, autorización, validación de entradas, exposición de datos y cabeceras.
+
+- `SecurityHeadersFilter` agrega `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y `Cache-Control: no-store` en `/api/**`.
+- `MatrizSeguridadTest`: 401 sin token, 200/403 por rol y verificación de que no se exponen `passwordHash`, `esCorrecta`, `respuestaNumerica` ni `explicacion`.
+- `SecurityHeadersTest` verifica las cabeceras.
+- `ProteccionDeEndpointsTest` sigue garantizando `@PreAuthorize` en todos los controladores.
+- **Pendiente manual:** rotar secretos de staging y confirmar que no hay credenciales versionadas. Ver [`docs/pruebas/hardening-seguridad.md`](pruebas/hardening-seguridad.md).
+
+## 18. Prueba de concurrencia (149)
+
+**Para qué.** Verificar que 50 envíos simultáneos del mismo intento no duplican registros.
+
+`ConcurrenciaEnviosTest` ejecuta 50 hilos con la misma clave de idempotencia en práctica y 50 respuestas simultáneas al mismo ítem del diagnóstico. Resultado: **un solo `intento_practica` y una sola `respuesta_diagnostico`**.
+
+## 19. Registro de estudiantes por invitación (150)
+
+**Para qué.** Cerrar el registro público: solo los estudiantes invitados por un docente pueden crear su cuenta.
+
+- Nueva tabla `invitacion` (correo, nombres, apellidos, grupo, hash del token, vencimiento y uso).
+- El docente carga el listado CSV, ve el estado (`INVITADO`, `REGISTRADO`, `VENCIDA`) y puede reenviar.
+- `POST /api/auth/registro` exige token válido, no usado, con el mismo correo; en la misma transacción crea el usuario, lo inscribe en el grupo y consume la invitación.
+- Correo por SMTP si `spring.mail.host` está configurado; en local/tests se registra el enlace (no-op).
+- Endpoints: `GET/POST /api/grupos/{id}/invitaciones`, `POST /api/grupos/{id}/invitaciones/{id}/reenviar` y `GET /api/auth/invitacion?token=`.
+- Frontend: `/docente/estudiantes` para cargar el listado y `/registro?token=…` para el estudiante.
+- **Configuración:** `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD`, `MAIL_FROM`, `FRONTEND_URL`.
+- **Pruebas:** `InvitacionControllerTest` cubre invitación vigente, usada, vencida, correo distinto y docente ajeno.
+
+## 20. Documentación técnica de la entrega (146)
+
+La arquitectura as-built, el diagrama de despliegue, las variables de entorno y la guía de instalación están en [`docs/entrega/arquitectura-despliegue.md`](entrega/arquitectura-despliegue.md). Staging sigue pendiente de #33; cuando exista se agregarán sus URLs y el proceso de despliegue real.
 
 ---
 

@@ -1,4 +1,4 @@
-# Observaciones de la validación de usabilidad (#143)
+﻿# Observaciones de la validación de usabilidad (#143)
 
 **Estado:** simulación técnica interna completada el 10 de noviembre de 2026. **Sesiones con usuarios reales pendientes.**
 **Entorno:** local; staging pendiente de #33.
@@ -6,7 +6,7 @@
 
 ## 1. Simulación técnica interna
 
-Se recorrieron los flujos con la prueba automatizada `FlujosCompletosE2ETest`, las 274 pruebas de backend, las 122 pruebas de frontend y revisión de las pantallas implementadas. Esta simulación sirve para comprobar que el protocolo se puede ejecutar, pero **no reemplaza la observación de usuarios reales**.
+Se recorrieron los flujos con la prueba automatizada `FlujosCompletosE2ETest`, las 285 pruebas de backend, las 122 pruebas de frontend y revisión de las pantallas implementadas. Esta simulación sirve para comprobar que el protocolo se puede ejecutar, pero **no reemplaza la observación de usuarios reales**.
 
 | Tarea | Evidencia técnica | Observación | Estado |
 |---|---|---|---|

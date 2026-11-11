@@ -1,4 +1,4 @@
-# Integración end-to-end del Sprint 4 (#140)
+﻿# Integración end-to-end del Sprint 4 (#140)
 
 **Estado:** verificado en local el 10 de noviembre de 2026. **Staging pendiente de #33.**
 
@@ -18,7 +18,7 @@ Que los módulos compartan usuarios, roles y datos, y que los tres flujos comple
 2. **Docente:** crea un grupo, inscribe al estudiante, consulta la lista de estudiantes, la analítica del grupo y el historial del estudiante.
 3. **Estudiante:** presenta los 24 ítems del diagnóstico, resuelve tres ejercicios de práctica con retroalimentación y consulta su progreso e historial.
 
-Resultado local: **backend completo con 274 pruebas, 0 fallos** (incluye las 2 E2E y las 2 del catálogo de actividades), además de `npm run lint`, `npm test` (122 pruebas) y `npm run build` en el frontend.
+Resultado local: **backend completo con 285 pruebas, 0 fallos** (incluye las 2 E2E y las 2 del catálogo de actividades), además de `npm run lint`, `npm test` (122 pruebas) y `npm run build` en el frontend.
 
 ## Recorrido manual en local
 

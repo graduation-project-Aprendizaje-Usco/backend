@@ -86,6 +86,9 @@ Variables de entorno (en staging se definen en el servicio de hosting, **nunca e
 | `CORS_ORIGINS` | Orígenes permitidos para el frontend | `http://localhost:5173` |
 | `SPRING_PROFILES_ACTIVE` | Perfil activo | `dev` |
 | `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Conexión a la base en staging | — |
+| `SPRING_MAIL_HOST` / `_PORT` / `_USERNAME` / `_PASSWORD` | SMTP para enviar invitaciones | sin configurar: el enlace se registra en el log |
+| `MAIL_FROM` | Remitente de las invitaciones | `no-reply@aprendizaje-usco.test` |
+| `FRONTEND_URL` | URL del frontend para armar `/registro?token=…` | `http://localhost:5173` |
 
 Propiedades de la prueba diagnóstica (en `application.properties`, no son secretos):
 
@@ -229,7 +232,7 @@ Quién responde por cada parte del backend. El detalle tarea por tarea está en 
 | `programaAcademico` | Obligatorio, uno de: Ingeniería Agrícola, Ingeniería Agroindustrial, Ingeniería Civil, Ingeniería de Petróleos, Ingeniería de Software, Ingeniería Electrónica, Licenciatura en Matemáticas (enum `ProgramaAcademico`) |
 | `nombres`, `apellidos` | Obligatorios, máximo 100 caracteres |
 
-Pendiente (tarea #150 "Implementar registro de estudiantes por invitación", ver [tareas-y-responsables.md](tareas-y-responsables.md)): solo podrán registrarse los estudiantes invitados por un docente y que estén en el listado de su grupo.
+El registro está **cerrado por invitación** (#150): el cuerpo incluye `tokenInvitacion`, el token debe estar vigente, no usado y corresponder al mismo correo. Si el token falta o no coincide, responde 422 y no crea la cuenta. El docente carga el listado desde `/docente/estudiantes`.
 
 ## 11. Limitaciones conocidas del MVP
 
@@ -493,3 +496,16 @@ Solo para `ADMIN`.
 | `GET /api/admin/actividades` | Catálogo de contenidos y ejercicios de todos los docentes, sin claves ni explicaciones | 200 · 401 · 403 |
 
 El administrador no puede desactivarse ni quitarse el rol ADMIN. Un usuario INACTIVO no puede iniciar sesión. Los grupos y sus estudiantes se consultan con `GET /api/grupos` y `GET /api/grupos/{id}/estudiantes`, que admiten ADMIN.
+
+## 19. Invitaciones de estudiantes (API)
+
+Solo `DOCENTE` dueño del grupo o `ADMIN`.
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/grupos/{grupoId}/invitaciones` | Lista invitaciones con estado `INVITADO`, `REGISTRADO` o `VENCIDA` | 200 · 401 · 403 · 404 |
+| `POST /api/grupos/{grupoId}/invitaciones` | Carga un listado `{estudiantes:[{correo,nombres,apellidos}]}`, valida todo y envía los enlaces | 201 · 400 · 401 · 403 · 409 · 422 |
+| `POST /api/grupos/{grupoId}/invitaciones/{id}/reenviar` | Genera un token nuevo y reenvía el correo | 200 · 401 · 403 · 404 · 409 |
+| `GET /api/auth/invitacion?token=…` | Público: datos para precargar el registro | 200 · 404 · 422 |
+
+Las invitaciones vencen a los 7 días, son de un solo uso y se guardan hasheadas (SHA-256). Al registrarse se crea el usuario y la fila de `grupo_estudiante` en la misma transacción. Un estudiante puede pertenecer a varios grupos.

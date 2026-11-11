@@ -1,4 +1,4 @@
-# Matriz de aceptación CA-01 a CA-16 (#141)
+﻿# Matriz de aceptación CA-01 a CA-16 (#141)
 
 **Fecha de ejecución:** 10 de noviembre de 2026.
 **Entorno:** local (Docker, PostgreSQL 17, backend Spring Boot y frontend Vite).
@@ -45,7 +45,7 @@
 ```powershell
 # Backend
 .\mvnw.cmd verify
-# Resultado: 274 pruebas, 0 fallos.
+# Resultado: 285 pruebas, 0 fallos.
 
 # Frontend
 npm run lint

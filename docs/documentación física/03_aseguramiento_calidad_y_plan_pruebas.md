@@ -1,4 +1,4 @@
-# Aseguramiento de Calidad y Plan de Pruebas
+﻿# Aseguramiento de Calidad y Plan de Pruebas
 
 ## Aprendizaje USCO
 
@@ -480,7 +480,7 @@ La matriz detallada de los 16 criterios, con su evidencia automatizada, está en
 
 | Prueba | Resultado | Evidencia |
 |---|---|---|
-| `.\mvnw.cmd verify` | Aprobado | 274 pruebas, 0 fallos; incluye Testcontainers y `FlujosCompletosE2ETest`. |
+| `.\mvnw.cmd verify` | Aprobado | 285 pruebas, 0 fallos; incluye Testcontainers y `FlujosCompletosE2ETest`. |
 
 ---
 
@@ -493,7 +493,7 @@ La matriz detallada de los 16 criterios, con su evidencia automatizada, está en
 
 ### 7.11.2 Pruebas ejecutadas y verificables
 
-- Backend: `.\mvnw.cmd verify` con 274 pruebas y 0 fallos.
+- Backend: `.\mvnw.cmd verify` con 285 pruebas y 0 fallos.
 - Frontend: lint, 122 pruebas y build con resultados positivos.
 - Matriz CA-01 a CA-16 ejecutada y documentada.
 
