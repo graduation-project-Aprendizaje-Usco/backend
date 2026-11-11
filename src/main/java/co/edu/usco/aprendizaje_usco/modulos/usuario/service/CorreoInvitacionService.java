@@ -9,8 +9,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 /**
- * Envío del enlace de invitación (#151). Si spring.mail.host está configurado usa
- * SMTP; si no, deja el enlace en el log para desarrollo y pruebas (no-op).
+ * Envío del enlace de invitación (#151). Si MAIL_HOST está configurado usa SMTP
+ * (por ejemplo Gmail); si no, deja el enlace en el log para desarrollo y pruebas.
  */
 @Service
 public class CorreoInvitacionService {
@@ -19,17 +19,30 @@ public class CorreoInvitacionService {
 
     private final ObjectProvider<JavaMailSender> mailSender;
     private final String remitente;
+    private final String mailHost;
+    private final String mailUsername;
+    private final String mailPassword;
 
     public CorreoInvitacionService(ObjectProvider<JavaMailSender> mailSender,
                                    @Value("${app.invitaciones.remitente:no-reply@aprendizaje-usco.test}")
-                                   String remitente) {
+                                   String remitente,
+                                   @Value("${MAIL_HOST:}") String mailHost,
+                                   @Value("${MAIL_USERNAME:}") String mailUsername,
+                                   @Value("${MAIL_PASSWORD:}") String mailPassword) {
         this.mailSender = mailSender;
         this.remitente = remitente;
+        this.mailHost = mailHost;
+        this.mailUsername = mailUsername;
+        this.mailPassword = mailPassword;
     }
 
     public void enviar(String correo, String enlace) {
         JavaMailSender sender = mailSender.getIfAvailable();
-        if (sender == null) {
+        boolean smtpListo = mailHost != null && !mailHost.isBlank()
+                && mailUsername != null && !mailUsername.isBlank()
+                && mailPassword != null && !mailPassword.isBlank()
+                && sender != null;
+        if (!smtpListo) {
             log.info("Invitación para {}: {}", correo, enlace);
             return;
         }

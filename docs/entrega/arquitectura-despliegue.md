@@ -16,7 +16,7 @@ flowchart LR
 - **Frontend:** React 19, Vite 8, React Router 8, MUI, Axios, Recharts, KaTeX.
 - **Backend:** Spring Boot 4.1, Java 21, Spring Security + OAuth2 Resource Server, Spring Data JPA, Flyway, Springdoc.
 - **Base de datos:** PostgreSQL 17. Flyway es la única fuente del esquema; Hibernate solo valida (`ddl-auto: validate`).
-- **Correo:** integración SMTP opcional para invitaciones. Sin `spring.mail.host`, el backend registra el enlace en el log (modo local/test).
+- **Correo:** integración SMTP opcional para invitaciones. Sin `MAIL_HOST`, `MAIL_USERNAME` y `MAIL_PASSWORD`, el backend registra el enlace en el log (modo local/test).
 
 ## 2. Módulos implementados
 
@@ -54,8 +54,10 @@ El detalle está en [`docs/base-de-datos/modelo-fisico.md`](../base-de-datos/mod
 | `JWT_SECRET` | Llave HS256, mínimo 32 caracteres |
 | `JWT_EXPIRATION_MINUTES` | Duración del token (por defecto 120) |
 | `CORS_ORIGINS` | Orígenes permitidos del frontend |
-| `SPRING_MAIL_HOST` / `_PORT` / `_USERNAME` / `_PASSWORD` | SMTP de invitaciones |
-| `MAIL_FROM` | Remitente de las invitaciones |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP de invitaciones (Gmail: `smtp.gmail.com` / `587` / contraseña de aplicación) |
+| `MAIL_SMTP_AUTH` / `MAIL_STARTTLS` | Autenticación y STARTTLS del SMTP |
+| `MAIL_HEALTH_ENABLED` | Incluir el correo en `/actuator/health` (por defecto `false`) |
+| `MAIL_FROM` | Remitente; si se omite, usa `MAIL_USERNAME` |
 | `FRONTEND_URL` | URL usada para armar el enlace `/registro?token=…` |
 
 ### Frontend

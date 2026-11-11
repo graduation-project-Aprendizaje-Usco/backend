@@ -417,10 +417,10 @@ Sin token responde 401 y con otro rol, 403.
 - Nueva tabla `invitacion` (correo, nombres, apellidos, grupo, hash del token, vencimiento y uso).
 - El docente carga el listado CSV, ve el estado (`INVITADO`, `REGISTRADO`, `VENCIDA`) y puede reenviar.
 - `POST /api/auth/registro` exige token válido, no usado, con el mismo correo; en la misma transacción crea el usuario, lo inscribe en el grupo y consume la invitación.
-- Correo por SMTP si `spring.mail.host` está configurado; en local/tests se registra el enlace (no-op).
+- Correo por SMTP si `MAIL_HOST`, `MAIL_USERNAME` y `MAIL_PASSWORD` están configurados (Gmail usa `smtp.gmail.com`, puerto 587 y STARTTLS); en local/tests se registra el enlace (no-op).
 - Endpoints: `GET/POST /api/grupos/{id}/invitaciones`, `POST /api/grupos/{id}/invitaciones/{id}/reenviar` y `GET /api/auth/invitacion?token=`.
 - Frontend: `/docente/estudiantes` para cargar el listado y `/registro?token=…` para el estudiante.
-- **Configuración:** `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD`, `MAIL_FROM`, `FRONTEND_URL`.
+- **Configuración:** `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SMTP_AUTH`, `MAIL_STARTTLS`, `MAIL_HEALTH_ENABLED`, `MAIL_FROM` (opcional) y `FRONTEND_URL`.
 - **Pruebas:** `InvitacionControllerTest` cubre invitación vigente, usada, vencida, correo distinto y docente ajeno.
 
 ## 20. Documentación técnica de la entrega (146)

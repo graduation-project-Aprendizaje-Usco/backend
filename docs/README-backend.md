@@ -86,8 +86,10 @@ Variables de entorno (en staging se definen en el servicio de hosting, **nunca e
 | `CORS_ORIGINS` | Orígenes permitidos para el frontend | `http://localhost:5173` |
 | `SPRING_PROFILES_ACTIVE` | Perfil activo | `dev` |
 | `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Conexión a la base en staging | — |
-| `SPRING_MAIL_HOST` / `_PORT` / `_USERNAME` / `_PASSWORD` | SMTP para enviar invitaciones | sin configurar: el enlace se registra en el log |
-| `MAIL_FROM` | Remitente de las invitaciones | `no-reply@aprendizaje-usco.test` |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP para enviar invitaciones (Gmail: `smtp.gmail.com`, `587`, contraseña de aplicación) | sin configurar: el enlace se registra en el log |
+| `MAIL_SMTP_AUTH` / `MAIL_STARTTLS` | Autenticación y STARTTLS del SMTP | `true` |
+| `MAIL_HEALTH_ENABLED` | Incluir el correo en `/actuator/health` | `false` hasta configurar credenciales |
+| `MAIL_FROM` | Remitente de las invitaciones | si se omite, usa `MAIL_USERNAME` |
 | `FRONTEND_URL` | URL del frontend para armar `/registro?token=…` | `http://localhost:5173` |
 
 Propiedades de la prueba diagnóstica (en `application.properties`, no son secretos):
@@ -509,3 +511,5 @@ Solo `DOCENTE` dueño del grupo o `ADMIN`.
 | `GET /api/auth/invitacion?token=…` | Público: datos para precargar el registro | 200 · 404 · 422 |
 
 Las invitaciones vencen a los 7 días, son de un solo uso y se guardan hasheadas (SHA-256). Al registrarse se crea el usuario y la fila de `grupo_estudiante` en la misma transacción. Un estudiante puede pertenecer a varios grupos.
+
+Para Gmail: `MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=587`, `MAIL_SMTP_AUTH=true`, `MAIL_STARTTLS=true`, y en `MAIL_PASSWORD` una **contraseña de aplicación** de Google (requiere verificación en dos pasos), no la contraseña normal. Mientras falte usuario o contraseña, el enlace se escribe en el log.
