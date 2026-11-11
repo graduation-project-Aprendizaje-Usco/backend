@@ -22,6 +22,9 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 | [Panel del administrador](#11-panel-del-administrador-scrum-46) | SCRUM-46 | Fernando Pérez (implementación: Nicolás Pérez) | En `develop` · verificado |
 | [Vistas de administración de grupos y actividades](#12-vistas-de-administración-de-grupos-y-actividades-scrum-46) | SCRUM-46 | Fernando Pérez (implementación: Nicolás Pérez) | En `develop` |
 | [Integración end-to-end de los módulos](#13-integración-end-to-end-de-los-módulos-140) | 140 | Juan David Polanco | Verificado en local; staging pendiente |
+| [Pruebas funcionales CA-01 a CA-16](#14-pruebas-funcionales-ca-01-a-ca-16-141) | 141 | Fernando Pérez | 16/16 cumplen con evidencia automatizada; revisión visual pendiente |
+| [Corrección de incidencias](#15-corrección-de-incidencias-142) | 142 | Juan David Polanco | Sin defectos altos abiertos; INC-01 corregida |
+| [Validación con usuarios piloto](#16-validación-con-usuarios-piloto-143) | 143 | Juan David Polanco | Protocolo y simulación interna listos; usuarios reales pendientes |
 
 ---
 
@@ -357,8 +360,39 @@ Sin token responde 401 y con otro rol, 403.
 
 **Validación manual.** `docs/pruebas/e2e-sprint-4.md` deja el guion y el resultado local. **Staging queda pendiente de #33**: el criterio de aceptación de #140 se cierra cuando exista el entorno y se repita el mismo recorrido.
 
+## 14. Pruebas funcionales CA-01 a CA-16 (141)
+
+**Para qué.** Ejecutar y documentar los 16 criterios de aceptación con evidencia y actualizar la matriz de trazabilidad.
+
+- CA-01..CA-16 se mapearon a RF-01..RF-16.
+- La matriz detallada está en [`docs/pruebas/matriz-aceptacion-ca.md`](pruebas/matriz-aceptacion-ca.md).
+- Resultado local: **16/16 cumplen** con evidencia automatizada y revisión de código.
+- Backend: `.\mvnw.cmd verify` → **274 pruebas, 0 fallos**.
+- Frontend: `npm run lint`, `npm test` → **122 pruebas**, y `npm run build`.
+- La revisión visual y con usuarios reales queda para #143.
+
+## 15. Corrección de incidencias (142)
+
+**Para qué.** Priorizar y corregir los defectos encontrados en la ejecución funcional.
+
+- **INC-01** corregida: «Roles y permisos» ya no es una página en construcción; explica los roles y enlaza a Usuarios con el filtro correspondiente (`RolesPage.jsx` y su prueba).
+- Sin defectos de prioridad Alta o Media abiertos.
+- Bloqueos externos: staging (#33) y participantes reales (#143).
+- Registro completo en [`docs/pruebas/registro-incidencias.md`](pruebas/registro-incidencias.md).
+
+## 16. Validación con usuarios piloto (143)
+
+**Para qué.** Aplicar el protocolo de usabilidad con estudiantes y docentes.
+
+- Protocolo: [`docs/pruebas/protocolo-usabilidad.md`](pruebas/protocolo-usabilidad.md).
+- Consentimiento: [`docs/pruebas/consentimiento-informado.md`](pruebas/consentimiento-informado.md).
+- Observaciones: [`docs/pruebas/observaciones-piloto.md`](pruebas/observaciones-piloto.md).
+- Se ejecutó una **simulación técnica interna** con las pruebas E2E y de componente; no sustituye a los usuarios reales.
+- **Pendiente manual:** reclutar 4–6 participantes, firmar consentimientos, ejecutar las sesiones, aplicar el SUS (#144) y repetir en staging.
+
 ---
 
 ## Pendientes conocidos
 
-- **Staging (SCRUM-13):** sin él, la verificación manual y las pruebas con usuarios piloto se hacen en local. La integración end-to-end (#140) quedó verificada en local y pendiente de repetirse en staging.
+- **Staging (SCRUM-13):** sin él, la verificación manual y las pruebas con usuarios piloto se hacen en local. La integración end-to-end (#140) y la matriz CA-01 a CA-16 (#141) quedaron verificadas en local y pendientes de repetirse en staging.
+- **Usuarios piloto:** #143 tiene protocolo y simulación interna, pero requiere 4–6 participantes reales y el SUS de #144.

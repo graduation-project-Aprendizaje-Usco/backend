@@ -197,5 +197,6 @@ Las limitaciones conocidas, como la revocación de tokens o la falta de límite 
 | `docs/code/gestion-actividades-contenidos.md` | Gestión de contenidos y ejercicios por el docente (SCRUM-43) |
 | `docs/code/rendimiento-servicios-criticos.md` · `pruebas/rendimiento/` | Pruebas de rendimiento con k6 y sus resultados (SCRUM-44) |
 | `docs/documentación física/` | Documento maestro, requisitos e historias de usuario, plan de pruebas |
+| `docs/pruebas/` | Matriz CA-01 a CA-16, incidencias, protocolo, consentimiento y observaciones de usabilidad |
 | `docs/tareas-y-responsables.md` | Qué pide cada tarea y quién la tiene |
 | `CONTRIBUTING.md` (cada repo) | Ramas, commits y PR |
