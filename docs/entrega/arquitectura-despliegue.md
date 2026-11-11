@@ -70,10 +70,13 @@ El detalle está en [`docs/base-de-datos/modelo-fisico.md`](../base-de-datos/mod
 ## 5. Instalación local
 
 ```powershell
-# Backend
+# Backend en Docker (todo junto)
 cd aprendizaje-usco-backend
-docker compose up -d
-.\mvnw.cmd spring-boot:run
+docker compose up -d --build
+
+# Alternativa: backend local con Maven
+# docker compose up -d postgres pgadmin
+# .\mvnw.cmd spring-boot:run
 
 # Frontend
 cd ..\aprendizaje-usco-frontend

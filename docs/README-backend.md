@@ -36,15 +36,16 @@ git checkout develop
 cp .env.template .env           # Windows: copy .env.template .env  → y llena los valores
 
 # Docker Desktop debe estar abierto
-docker compose up -d            # PostgreSQL y pgAdmin; conserva los datos en postgres_data/
+
+# Opción 1: todo en Docker (backend + PostgreSQL + pgAdmin)
+docker compose up -d --build
+
+# Opción 2: backend local y solo base + pgAdmin en Docker
+docker compose up -d postgres pgadmin
 ./mvnw spring-boot:run          # Windows: .\mvnw.cmd spring-boot:run
 ```
 
-Con el perfil `dev`, Spring Boot conecta al PostgreSQL de `compose.yaml` (puerto local 5433), valida/aplica las migraciones pendientes de Flyway y carga los usuarios de prueba. También se puede levantar toda la aplicación en contenedores:
-
-```bash
-docker compose --profile backend up --build
-```
+Con el perfil `dev`, Spring Boot conecta al PostgreSQL de `compose.yaml` (puerto local 5433), valida/aplica las migraciones pendientes de Flyway y carga los usuarios de prueba. En la opción 1 el backend queda en `http://localhost:8080`; en la opción 2 lo levanta Maven y no debe ejecutarse al mismo tiempo que el contenedor del backend porque ambos usan el puerto 8080.
 
 PostgreSQL guarda sus datos en `postgres_data/`. Para detener los servicios sin borrar los datos usa `docker compose stop`.
 

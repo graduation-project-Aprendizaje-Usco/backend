@@ -22,7 +22,7 @@ Resultado local: **backend completo con 285 pruebas, 0 fallos** (incluye las 2 E
 
 ## Recorrido manual en local
 
-Con `docker compose up -d`, `.\mvnw.cmd spring-boot:run` y `npm run dev`:
+Con `docker compose up -d --build` y `npm run dev` (backend en Docker), o con `docker compose up -d postgres pgadmin`, `.\mvnw.cmd spring-boot:run` y `npm run dev` si usas el backend local:
 
 1. Entrar como `admin@aprendizaje.test` / `Admin2026*`.
 2. En **Usuarios**, crear un docente y copiar su contraseña temporal.

@@ -77,15 +77,21 @@ flowchart LR
 
 Todos los puertos se publican solo en `127.0.0.1`: no quedan expuestos a la red.
 
-### 2.2 Backend en contenedor (opcional)
+### 2.2 Backend en contenedor
 
-El `Dockerfile` del backend compila con Maven y corre el `.jar` sobre `eclipse-temurin:21-jre`. Para levantar API, base y pgAdmin juntos:
+El `Dockerfile` del backend compila con Maven y corre el `.jar` sobre `eclipse-temurin:21-jre`. Por defecto, `docker compose up -d --build` levanta API, base y pgAdmin juntos:
 
 ```bash
-docker compose --profile backend up --build
+docker compose up -d --build
 ```
 
-Así el backend se conecta a `postgres:5432` por la red interna de Docker.
+Si prefieres el backend local con Maven, levanta solo la base y pgAdmin:
+
+```bash
+docker compose up -d postgres pgadmin
+```
+
+Así el backend en contenedor se conecta a `postgres:5432` por la red interna de Docker.
 
 ### 2.3 Staging (pendiente, SCRUM-13)
 

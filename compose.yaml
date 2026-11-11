@@ -1,8 +1,8 @@
 # Entorno local de Aprendizaje USCO.
 #
-#   docker compose up -d                        → PostgreSQL + pgAdmin (para correr el backend con mvnw)
-#   docker compose --profile backend up --build → todo en Docker, incluido el backend
-#   docker compose stop                         → detener sin borrar datos
+#   docker compose up -d --build              → backend + PostgreSQL + pgAdmin
+#   docker compose up -d postgres pgadmin     → solo base y pgAdmin (backend con mvnw)
+#   docker compose stop                       → detener sin borrar datos
 #
 # Los puertos se publican solo en 127.0.0.1: accesibles desde tu equipo,
 # no desde otros dispositivos de la red (pgAdmin no pide login).
@@ -11,6 +11,7 @@
 services:
   postgres:
     image: postgres:17-alpine
+    restart: unless-stopped
     env_file:
       - .env
     environment:
@@ -31,6 +32,7 @@ services:
 # Cliente web de PostgreSQL: http://localhost:5050
   pgadmin:
     image: dpage/pgadmin4:9
+    restart: unless-stopped
     env_file:
       - .env
     environment:
@@ -48,12 +50,11 @@ services:
       org.springframework.boot.ignore: 'true'
 
 
-# Solo se levanta a propósito (docker compose --profile backend up).
-# Sin el perfil, Spring Boot (spring-boot-docker-compose) levanta solo postgres
-# y no intenta construir esta imagen ni ocupar el puerto 8080.
+# Backend en Docker. Si vas a correr el backend con mvnw, levanta solo
+# `docker compose up -d postgres pgadmin` para no ocupar el puerto 8080.
   backend:
-    profiles: ["backend"]
     build: .
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
