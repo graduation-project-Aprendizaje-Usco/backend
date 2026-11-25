@@ -31,9 +31,10 @@ class ProteccionDeEndpointsTest {
 
     /** "Clase#método" que no llevan @PreAuthorize a propósito. */
     private static final Set<String> EXCEPCIONES = Set.of(
-            "AuthController#login",      // público (SecurityConfig: permitAll)
-            "AuthController#registrar",  // público (SecurityConfig: permitAll)
-            "AuthController#me"          // cualquier usuario con sesión: devuelve sus propios datos
+            "AuthController#login",       // público (SecurityConfig: permitAll)
+            "AuthController#registrar",   // público (SecurityConfig: permitAll)
+            "AuthController#invitacion",  // público: consulta el token de la invitación
+            "AuthController#me"           // cualquier usuario con sesión: devuelve sus propios datos
     );
 
     @Test

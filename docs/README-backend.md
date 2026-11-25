@@ -36,15 +36,16 @@ git checkout develop
 cp .env.template .env           # Windows: copy .env.template .env  → y llena los valores
 
 # Docker Desktop debe estar abierto
-docker compose up -d            # PostgreSQL y pgAdmin; conserva los datos en postgres_data/
+
+# Opción 1: todo en Docker (backend + PostgreSQL + pgAdmin)
+docker compose up -d --build
+
+# Opción 2: backend local y solo base + pgAdmin en Docker
+docker compose up -d postgres pgadmin
 ./mvnw spring-boot:run          # Windows: .\mvnw.cmd spring-boot:run
 ```
 
-Con el perfil `dev`, Spring Boot conecta al PostgreSQL de `compose.yaml` (puerto local 5433), valida/aplica las migraciones pendientes de Flyway y carga los usuarios de prueba. También se puede levantar toda la aplicación en contenedores:
-
-```bash
-docker compose --profile backend up --build
-```
+Con el perfil `dev`, Spring Boot conecta al PostgreSQL de `compose.yaml` (puerto local 5433), valida/aplica las migraciones pendientes de Flyway y carga los usuarios de prueba. En la opción 1 el backend queda en `http://localhost:8080`; en la opción 2 lo levanta Maven y no debe ejecutarse al mismo tiempo que el contenedor del backend porque ambos usan el puerto 8080.
 
 PostgreSQL guarda sus datos en `postgres_data/`. Para detener los servicios sin borrar los datos usa `docker compose stop`.
 
@@ -86,6 +87,11 @@ Variables de entorno (en staging se definen en el servicio de hosting, **nunca e
 | `CORS_ORIGINS` | Orígenes permitidos para el frontend | `http://localhost:5173` |
 | `SPRING_PROFILES_ACTIVE` | Perfil activo | `dev` |
 | `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Conexión a la base en staging | — |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP para enviar invitaciones (Gmail: `smtp.gmail.com`, `587`, contraseña de aplicación) | sin configurar: el enlace se registra en el log |
+| `MAIL_SMTP_AUTH` / `MAIL_STARTTLS` | Autenticación y STARTTLS del SMTP | `true` |
+| `MAIL_HEALTH_ENABLED` | Incluir el correo en `/actuator/health` | `false` hasta configurar credenciales |
+| `MAIL_FROM` | Remitente de las invitaciones | si se omite, usa `MAIL_USERNAME` |
+| `FRONTEND_URL` | URL del frontend para armar `/registro?token=…` | `http://localhost:5173` |
 
 Propiedades de la prueba diagnóstica (en `application.properties`, no son secretos):
 
@@ -229,7 +235,7 @@ Quién responde por cada parte del backend. El detalle tarea por tarea está en 
 | `programaAcademico` | Obligatorio, uno de: Ingeniería Agrícola, Ingeniería Agroindustrial, Ingeniería Civil, Ingeniería de Petróleos, Ingeniería de Software, Ingeniería Electrónica, Licenciatura en Matemáticas (enum `ProgramaAcademico`) |
 | `nombres`, `apellidos` | Obligatorios, máximo 100 caracteres |
 
-Pendiente (tarea #150 "Implementar registro de estudiantes por invitación", ver [tareas-y-responsables.md](tareas-y-responsables.md)): solo podrán registrarse los estudiantes invitados por un docente y que estén en el listado de su grupo.
+El registro está **cerrado por invitación** (#150): el cuerpo incluye `tokenInvitacion`, el token debe estar vigente, no usado y corresponder al mismo correo. Si el token falta o no coincide, responde 422 y no crea la cuenta. El docente carga el listado desde `/docente/estudiantes`.
 
 ## 11. Limitaciones conocidas del MVP
 
@@ -478,3 +484,33 @@ Reglas de validación:
 - El motor de práctica ya filtra ejercicios y contenidos activos; un ejercicio desactivado no aparece en `GET /api/practica/siguiente`.
 
 El detalle técnico está en [`docs/code/gestion-actividades-contenidos.md`](code/gestion-actividades-contenidos.md).
+
+## 18. Administración de usuarios y panel (API)
+
+Solo para `ADMIN`.
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/admin/usuarios?buscar=&rol=&estado=` | Lista usuarios con búsqueda y filtros opcionales | 200 · 401 · 403 |
+| `POST /api/admin/usuarios` | Crea un usuario y devuelve una contraseña temporal | 201 · 400 · 401 · 403 · 409 · 422 |
+| `PUT /api/admin/usuarios/{id}` | Edita nombres, apellidos, rol y programa; no cambia el correo | 200 · 400 · 401 · 403 · 404 · 422 |
+| `PATCH /api/admin/usuarios/{id}/estado` | Activa o desactiva. Cuerpo: `{"estado":"INACTIVO"}` | 200 · 400 · 401 · 403 · 404 · 422 |
+| `GET /api/admin/resumen` | Conteos de usuarios por rol, grupos, contenidos y ejercicios activos | 200 · 401 · 403 |
+| `GET /api/admin/actividades` | Catálogo de contenidos y ejercicios de todos los docentes, sin claves ni explicaciones | 200 · 401 · 403 |
+
+El administrador no puede desactivarse ni quitarse el rol ADMIN. Un usuario INACTIVO no puede iniciar sesión. Los grupos y sus estudiantes se consultan con `GET /api/grupos` y `GET /api/grupos/{id}/estudiantes`, que admiten ADMIN.
+
+## 19. Invitaciones de estudiantes (API)
+
+Solo `DOCENTE` dueño del grupo o `ADMIN`.
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/grupos/{grupoId}/invitaciones` | Lista invitaciones con estado `INVITADO`, `REGISTRADO` o `VENCIDA` | 200 · 401 · 403 · 404 |
+| `POST /api/grupos/{grupoId}/invitaciones` | Carga un listado `{estudiantes:[{correo,nombres,apellidos}]}`, valida todo y envía los enlaces | 201 · 400 · 401 · 403 · 409 · 422 |
+| `POST /api/grupos/{grupoId}/invitaciones/{id}/reenviar` | Genera un token nuevo y reenvía el correo | 200 · 401 · 403 · 404 · 409 |
+| `GET /api/auth/invitacion?token=…` | Público: datos para precargar el registro | 200 · 404 · 422 |
+
+Las invitaciones vencen a los 7 días, son de un solo uso y se guardan hasheadas (SHA-256). Al registrarse se crea el usuario y la fila de `grupo_estudiante` en la misma transacción. Un estudiante puede pertenecer a varios grupos.
+
+Para Gmail: `MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=587`, `MAIL_SMTP_AUTH=true`, `MAIL_STARTTLS=true`, y en `MAIL_PASSWORD` una **contraseña de aplicación** de Google (requiere verificación en dos pasos), no la contraseña normal. Mientras falte usuario o contraseña, el enlace se escribe en el log.

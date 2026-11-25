@@ -48,7 +48,16 @@ public record RegistroRequest(
         @Schema(example = "Ingeniería de Software")
         @NotBlank(message = "El programa académico es obligatorio")
         @ProgramaAcademicoValido
-        String programaAcademico) {
+        String programaAcademico,
+
+        @Schema(description = "Token del enlace de invitación")
+        String tokenInvitacion) {
+
+    /** Compatibilidad con el registro anterior; el token es obligatorio en producción. */
+    public RegistroRequest(String nombres, String apellidos, String correo, String password,
+                           String programaAcademico) {
+        this(nombres, apellidos, correo, password, programaAcademico, null);
+    }
 
     /** "u" + 11 dígitos + "@usco.edu.co" (sin importar mayúsculas: el correo se guarda en minúsculas). */
     public static final String PATRON_CORREO_ESTUDIANTE = "^u\\d{11}@usco\\.edu\\.co$";

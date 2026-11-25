@@ -1,4 +1,4 @@
-# Aseguramiento de Calidad y Plan de Pruebas
+﻿# Aseguramiento de Calidad y Plan de Pruebas
 
 ## Aprendizaje USCO
 
@@ -19,27 +19,30 @@ Se incluyen:
 - Pruebas de contrato de API.
 - Pruebas de esquema de base de datos.
 - Pruebas de seguridad básicas (autenticación y autorización).
+- Pruebas end-to-end de los tres roles por API y componentes.
+- Pruebas de rendimiento ejecutadas con k6.
+- Protocolo y simulación interna de usabilidad.
 
 Se excluyen en esta versión:
 
-- Pruebas de rendimiento formales.
-- Pruebas de usabilidad con usuarios piloto.
+- Sesiones de usabilidad con usuarios reales (pendientes de #143).
 - Pruebas de penetración.
 
 ### 7.1.3 Componentes incluidos
 
-- Backend: autenticación, diagnóstico, práctica adaptativa, esquema de base de datos.
-- Frontend: autenticación, enrutamiento, protección por rol, contexto de sesión.
+- Backend: autenticación, diagnóstico, práctica adaptativa, contenidos, progreso, analítica, grupos y administración.
+- Frontend: autenticación, enrutamiento, protección por rol, diagnóstico, práctica, progreso, dashboards y administración.
 
 ### 7.1.4 Componentes excluidos
 
-- Módulos de progreso, analítica, administración y grupos (no implementados).
-- Pantallas provisionales del frontend que solo muestran "En construcción".
+- Las pantallas `/docente/estudiantes` y `/docente/reportes`, que siguen en construcción; sus funciones principales están cubiertas por el dashboard.
+- La validación con usuarios piloto reales, pendiente de #143.
 
 ### 7.1.5 Riesgos
 
-- Docker Desktop no disponible en el entorno de auditoría impide ejecutar las pruebas de integración del backend.
-- Las pantallas provisionales dificultan las pruebas end-to-end del flujo completo.
+- La ausencia de staging dificulta la validación en el entorno de despliegue.
+- La falta de usuarios piloto reales impide calcular el SUS y el porcentaje de tareas sin ayuda.
+- Las pantallas provisionales restantes no bloquean los criterios, pero pueden afectar la percepción de usabilidad.
 
 ### 7.1.6 Responsabilidades
 
@@ -76,10 +79,10 @@ Se excluyen en esta versión:
 | Integración | Pruebas con base de datos real (Testcontainers). | Implementadas en backend. |
 | API | Pruebas de contrato y códigos de respuesta. | Implementadas en backend (MockMvc). |
 | UI/Componente | Pruebas de componentes React con Vitest. | Implementadas en frontend. |
-| End-to-end | Flujos completos en navegador. | No implementadas. |
+| End-to-end | Flujos completos por API y componentes; recorrido de navegador con usuarios pendiente. | Implementadas en backend y componentes. |
 | Rendimiento | Carga y tiempos de respuesta. | No ejecutadas. |
 | Seguridad | Fuerza bruta, inyección, CORS. | Parciales (autenticación/autorización). |
-| Usabilidad | Validación con usuarios. | No ejecutadas. |
+| Usabilidad | Validación con usuarios. | Protocolo y simulación interna listos; sesiones reales pendientes. |
 
 ### 7.2.2 Enfoque por módulo
 
@@ -117,7 +120,7 @@ Se excluyen en esta versión:
 - **Herramientas:** Vitest, jsdom, user-event.
 - **Datos de prueba:** tokens JWT de prueba y funciones simuladas.
 - **Procedimiento:** ejecutar `npm test`.
-- **Resultado esperado:** 27 tests aprobados.
+- **Resultado esperado:** 122 pruebas aprobadas en 22 archivos.
 
 ### 7.3.4 Pruebas de lint y build
 
@@ -377,7 +380,7 @@ Se excluyen en esta versión:
 - Aplicar protocolo con 4-6 tareas a estudiantes y docentes piloto.
 - Instrumento SUS.
 - Umbral: ≥ 68.
-- **Estado:** Pendiente.
+- **Estado:** protocolo, consentimiento y simulación técnica interna listos. Sesiones con usuarios reales pendientes. Ver [`docs/pruebas/protocolo-usabilidad.md`](../pruebas/protocolo-usabilidad.md).
 
 ---
 
@@ -451,39 +454,33 @@ Se excluyen en esta versión:
 
 ## 7.10. Matriz de cobertura
 
-| Requisito | Historia | Caso de prueba | Tipo de prueba | Ejecutado | Resultado | Defectos |
-|---|---|---|---|---|---|---|
-| RF-AUT-001 | HU-AUT-001 | CP-AUT-001 | Integración | No | — | — |
-| RF-AUT-002 | HU-AUT-002 | CP-AUT-002 | Integración | No | — | — |
-| RF-AUT-003 | — | CP-AUT-003 | Integración | No | — | — |
-| RF-DIA-001 | HU-DIA-001 | CP-DIA-001 | Integración | No | — | — |
-| RF-DIA-002 | HU-DIA-001 | CP-DIA-002 | Integración | No | — | — |
-| RF-DIA-003 | HU-DIA-001 | CP-DIA-003 | Integración | No | — | — |
-| RF-DIA-004 | HU-DIA-001 | CP-DIA-004 | Unitaria | No | — | — |
-| RF-DIA-005 | HU-DIA-001 | CP-DIA-005 | Unitaria | No | — | — |
-| RF-PRA-001 | HU-PRA-001 | CP-PRA-001 | Integración | No | — | — |
-| RF-PRA-002 | HU-PRA-001 | CP-PRA-002 | Componente | No | — | — |
-| RF-PRA-003 | HU-PRA-001 | CP-PRA-003 | Integración | No | — | — |
-| RF-PRA-004 | HU-PRA-001 | CP-PRA-004 | Unitaria | No | — | — |
-| RF-PRA-005 | HU-PRA-001 | CP-PRA-004 | Unitaria | No | — | — |
-| RF-PRO-001 | HU-PRO-001 | CP-PRO-001 | — | No | — | — |
-| RF-ANA-001 | HU-ANA-001 | CP-ANA-001 | — | No | — | — |
-| RF-ADM-001 | HU-ADM-001 | CP-ADM-001 | — | No | — | — |
+La matriz detallada de los 16 criterios, con su evidencia automatizada, está en
+[`docs/pruebas/matriz-aceptacion-ca.md`](../pruebas/matriz-aceptacion-ca.md).
+
+| CP | CAs | Cobertura | Ejecutado | Resultado |
+|---|---|---|---|---|
+| CP-01 | CA-01 | Autenticación, registro y control de acceso | Sí | Cumple |
+| CP-02 | CA-02, CA-03, CA-04 | Diagnóstico, puntaje y categoría | Sí | Cumple |
+| CP-03 | CA-05, CA-06, CA-07, CA-08, CA-16 | Práctica, retroalimentación, trazabilidad y niveles | Sí | Cumple |
+| CP-04 | CA-09, CA-15 | Progreso e historial | Sí | Cumple |
+| CP-05 | CA-10, CA-11 | Analítica del docente | Sí | Cumple |
+| CP-06 | CA-12, CA-14 | Contenidos y banco de ejercicios | Sí | Cumple |
+| CP-07 | CA-13 | Administración de usuarios y roles | Sí | Cumple |
+| CP-08 | CA-01 a CA-16 | Integración de los tres flujos | Sí, en local | Cumple; staging pendiente #33 |
 
 ### Pruebas ejecutadas localmente (frontend)
 
 | Prueba | Resultado | Evidencia |
 |---|---|---|
 | `npm run lint` | Aprobado | Sin errores. |
-| `npm test` | Aprobado | 27 tests en 4 archivos. |
-| `npm run build` | Aprobado | Build generado en `dist/` con advertencia de tamaño de chunk. |
+| `npm test` | Aprobado | 122 pruebas en 22 archivos. |
+| `npm run build` | Aprobado | Build de producción generado. |
 
 ### Pruebas ejecutadas localmente (backend)
 
 | Prueba | Resultado | Evidencia |
 |---|---|---|
-| `./mvnw.cmd compile` | Aprobado | BUILD SUCCESS. |
-| `./mvnw.cmd test` | No ejecutado | Docker daemon no está disponible en el entorno de auditoría; Testcontainers requiere Docker. |
+| `.\mvnw.cmd verify` | Aprobado | 285 pruebas, 0 fallos; incluye Testcontainers y `FlujosCompletosE2ETest`. |
 
 ---
 
@@ -491,38 +488,40 @@ Se excluyen en esta versión:
 
 ### 7.11.1 Pruebas existentes
 
-- Backend: clases de prueba identificadas para autenticación, seguridad, diagnóstico, práctica, esquema de base de datos y excepciones.
-- Frontend: 27 tests distribuidos en `LoginPage.test.jsx`, `RegistroPage.test.jsx`, `ProtectedRoute.test.jsx` y `AuthContext.test.jsx`.
+- Backend: pruebas unitarias, de integración con Testcontainers, de contrato y E2E de los tres roles.
+- Frontend: 122 pruebas de componentes y clientes API en 22 archivos.
 
 ### 7.11.2 Pruebas ejecutadas y verificables
 
-- Frontend: lint, tests y build ejecutados localmente con resultados positivos.
-- Backend: compilación exitosa.
+- Backend: `.\mvnw.cmd verify` con 285 pruebas y 0 fallos.
+- Frontend: lint, 122 pruebas y build con resultados positivos.
+- Matriz CA-01 a CA-16 ejecutada y documentada.
 
 ### 7.11.3 Pruebas pendientes
 
-- Pruebas de integración del backend con Testcontainers.
-- Pruebas end-to-end.
-- Pruebas de rendimiento.
-- Pruebas de usabilidad con usuarios piloto.
-- Pruebas de accesibilidad con Lighthouse.
+- Validación con usuarios piloto reales y cálculo del SUS (#143, #144).
+- Repetición del recorrido en staging cuando exista #33.
+- Revisión de accesibilidad con Lighthouse y lector de pantalla en las pantallas principales.
 
 ### 7.11.4 Defectos confirmados
 
-Ninguno observado en este ejercicio de documentación.
+- INC-01 corregido: «Roles y permisos» ya no es una página en construcción; explica los roles y enlaza a Usuarios.
+- Sin defectos de prioridad Alta o Media abiertos.
+- Incidencias y bloqueos en [`docs/pruebas/registro-incidencias.md`](../pruebas/registro-incidencias.md).
 
 ### 7.11.5 Riesgos de calidad
 
-- Las pantallas provisionales del frontend no permiten validar flujos completos.
-- La dependencia de Docker dificulta la ejecución local de pruebas de backend.
+- Sin staging no se puede cerrar la validación en el entorno de despliegue.
+- Sin usuarios piloto reales no se puede calcular el SUS ni el porcentaje de tareas sin ayuda.
+- Las pantallas `/docente/estudiantes` y `/docente/reportes` siguen en construcción, aunque el dashboard cubre sus funciones principales.
 
 ### 7.11.6 Recomendaciones priorizadas
 
-1. Completar las interfaces de diagnóstico y práctica para poder ejecutar pruebas end-to-end.
-2. Implementar endpoints de progreso y analítica.
-3. Ejecutar el backend CI localmente con Docker Desktop activo.
-4. Agregar cobertura de código y pruebas de componentes para las pantallas principales.
-5. Programar la validación con usuarios piloto con protocolo y SUS.
+1. Reclutar y agendar a los participantes de usabilidad.
+2. Ejecutar el SUS y entregarlo a #144.
+3. Repetir los flujos en staging cuando exista #33.
+4. Revisar accesibilidad con Lighthouse y lector de pantalla.
+5. Mantener la matriz CA/CP actualizada con cada corrección.
 
 ---
 

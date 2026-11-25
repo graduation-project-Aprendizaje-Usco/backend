@@ -77,15 +77,21 @@ flowchart LR
 
 Todos los puertos se publican solo en `127.0.0.1`: no quedan expuestos a la red.
 
-### 2.2 Backend en contenedor (opcional)
+### 2.2 Backend en contenedor
 
-El `Dockerfile` del backend compila con Maven y corre el `.jar` sobre `eclipse-temurin:21-jre`. Para levantar API, base y pgAdmin juntos:
+El `Dockerfile` del backend compila con Maven y corre el `.jar` sobre `eclipse-temurin:21-jre`. Por defecto, `docker compose up -d --build` levanta API, base y pgAdmin juntos:
 
 ```bash
-docker compose --profile backend up --build
+docker compose up -d --build
 ```
 
-Así el backend se conecta a `postgres:5432` por la red interna de Docker.
+Si prefieres el backend local con Maven, levanta solo la base y pgAdmin:
+
+```bash
+docker compose up -d postgres pgadmin
+```
+
+Así el backend en contenedor se conecta a `postgres:5432` por la red interna de Docker.
 
 ### 2.3 Staging (pendiente, SCRUM-13)
 
@@ -139,8 +145,11 @@ Todas las rutas empiezan por `/api`. Las únicas públicas son `POST /auth/login
 | usuario (grupos) | `GET /grupos` | DOCENTE, ADMIN | Lista los grupos del docente (todos para el admin) |
 | usuario (grupos) | `GET /grupos/{id}/estudiantes` | DOCENTE, ADMIN | Estudiantes de un grupo |
 | usuario (grupos) | `POST /grupos/{id}/estudiantes` | DOCENTE, ADMIN | Inscribe un estudiante por su correo |
+| usuario (invitaciones) | `GET/POST /grupos/{id}/invitaciones` y `POST /grupos/{id}/invitaciones/{id}/reenviar` | DOCENTE dueño, ADMIN | Carga el listado, consulta estado y reenvía invitaciones (SCRUM-150) |
+| usuario (invitaciones) | `GET /auth/invitacion?token=…` | público | Datos para precargar el registro desde el enlace |
 | usuario (administración) | `GET/POST /admin/usuarios`, `PUT /admin/usuarios/{id}` y `PATCH /admin/usuarios/{id}/estado` | ADMIN | Listar con búsqueda y filtros, crear con contraseña temporal, editar el rol y activar o desactivar (SCRUM-45) |
 | usuario (administración) | `GET /admin/resumen` | ADMIN | Conteos del panel: usuarios por rol, grupos y actividades activas (SCRUM-46) |
+| contenido (administración) | `GET /admin/actividades` | ADMIN | Catálogo de contenidos y ejercicios de todos los docentes, sin claves ni explicaciones (SCRUM-46) |
 | diagnostico | `POST /diagnosticos/intentos` | ESTUDIANTE | Inicia la prueba |
 | diagnostico | `GET /diagnosticos/intentos/actual` | ESTUDIANTE | Intento en curso o finalizado |
 | diagnostico | `GET /diagnosticos/intentos/{id}` | ESTUDIANTE | Ítems y respuestas guardadas |
@@ -168,6 +177,8 @@ Todas las rutas empiezan por `/api`. Las únicas públicas son `POST /auth/login
 | Errores | 401 sin token o con token inválido; 403 rol sin permiso; siempre con el formato estándar de error |
 | Aislamiento de datos | El id del usuario sale del token, nunca del cliente; un estudiante solo ve lo suyo, un docente solo a estudiantes de sus grupos y solo puede editar los contenidos y ejercicios que creó (403 en los demás) |
 | CORS | Solo los orígenes de `CORS_ORIGINS` |
+| Cabeceras | `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y `Cache-Control: no-store` en `/api/**` |
+| Invitaciones | Token aleatorio de un solo uso guardado como hash SHA-256; vence a los 7 días y exige coincidencia de correo |
 | Datos personales (Ley 1581) | Autorización de datos al iniciar el diagnóstico; los usuarios de prueba solo existen en `dev` |
 
 Las limitaciones conocidas, como la revocación de tokens o la falta de límite de intentos de login, están en el README del backend, §11.
@@ -196,5 +207,7 @@ Las limitaciones conocidas, como la revocación de tokens o la falta de límite 
 | `docs/code/gestion-actividades-contenidos.md` | Gestión de contenidos y ejercicios por el docente (SCRUM-43) |
 | `docs/code/rendimiento-servicios-criticos.md` · `pruebas/rendimiento/` | Pruebas de rendimiento con k6 y sus resultados (SCRUM-44) |
 | `docs/documentación física/` | Documento maestro, requisitos e historias de usuario, plan de pruebas |
+| `docs/pruebas/` | Matriz CA-01 a CA-16, incidencias, protocolo, consentimiento y observaciones de usabilidad |
+| `docs/entrega/arquitectura-despliegue.md` | Arquitectura as-built, diagrama de despliegue, variables y guía de instalación (#146) |
 | `docs/tareas-y-responsables.md` | Qué pide cada tarea y quién la tiene |
 | `CONTRIBUTING.md` (cada repo) | Ramas, commits y PR |

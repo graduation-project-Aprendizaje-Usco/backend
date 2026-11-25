@@ -11,13 +11,14 @@ Migraciones (`src/main/resources/db/migration/`):
 | `V5__esquema_practica.sql` | Contenidos, ejercicios, opciones, intentos, niveles e historial de nivel |
 | `V6__datos_ejercicios_semilla.sql` | 90 ejercicios semilla: 45 de Cálculo Diferencial y 45 de Cálculo Integral |
 | `V7__crear_grupos_docentes_estudiantes.sql` | Tablas `grupo` y `grupo_estudiante` (antes `V202610242250__…`; se renombró para la numeración consecutiva) |
+| `V8__crear_invitaciones.sql` | Tabla `invitacion` para el registro de estudiantes por invitación |
 | `db/dev-data/R__usuarios_de_prueba.sql` | Usuarios de prueba; solo con el perfil `dev` |
 
 Motor: PostgreSQL 17. Convención: tablas y columnas en `snake_case` singular; restricciones `pk_`, `fk_`, `uq_`, `ck_`; índices `ix_`.
 
 ## Diagrama completo (as-built)
 
-Las 17 tablas y sus 30 relaciones.
+Las 18 tablas y sus 31 relaciones.
 
 **De dónde sale.** Se generó el 1 de noviembre de 2026 a partir de la base real, con todas las migraciones aplicadas, consultando `information_schema` y `pg_constraint`. Si una migración nueva cambia el esquema, actualiza este diagrama en el mismo PR.
 
@@ -58,6 +59,7 @@ erDiagram
     usuario ||--o{ grupo : "docente_id"
     usuario ||--o{ grupo_estudiante : "estudiante_id"
     grupo ||--o{ grupo_estudiante : "grupo_id"
+    grupo ||--o{ invitacion : "grupo_id"
     competencia {
         bigint id PK
         varchar codigo UK
@@ -106,6 +108,18 @@ erDiagram
         bigint grupo_id PK, FK
         bigint estudiante_id PK, FK
         timestamptz creado_en
+    }
+    invitacion {
+        bigint id PK
+        bigint grupo_id FK
+        varchar correo
+        varchar nombres
+        varchar apellidos
+        varchar token_hash UK
+        timestamptz vence_en
+        timestamptz usada_en "opcional"
+        timestamptz creado_en
+        timestamptz actualizado_en
     }
     historial_nivel {
         bigint id PK
@@ -276,6 +290,23 @@ erDiagram
 | `grupo_estudiante` | Clave primaria compuesta (`grupo_id`, `estudiante_id`), con claves foráneas a `grupo` y `usuario`; `creado_en` |
 
 La aplicación valida que `docente_id` pertenezca a un usuario con rol `DOCENTE` y que `estudiante_id` corresponda a un estudiante activo. La clave primaria compuesta impide inscripciones duplicadas. Los índices `ix_grupo_docente_id` e `ix_grupo_estudiante_estudiante_id` permiten filtrar por responsable y localizar las asociaciones de un estudiante. Las operaciones de docentes verifican que el responsable autenticado coincida con el grupo.
+
+## invitacion
+
+| Columna | Tipo | Nulo | Restricciones |
+|---|---|---|---|
+| id | BIGINT GENERATED ALWAYS AS IDENTITY | No | `pk_invitacion` |
+| grupo_id | BIGINT | No | `fk_invitacion_grupo` → `grupo.id` (ON DELETE CASCADE); `ix_invitacion_grupo_id` |
+| correo | VARCHAR(150) | No | `uq_invitacion_grupo_correo`; `ck_invitacion_correo_minuscula`; `ix_invitacion_correo` |
+| nombres | VARCHAR(100) | No | |
+| apellidos | VARCHAR(100) | No | |
+| token_hash | VARCHAR(64) | No | `uq_invitacion_token_hash` (SHA-256, nunca el token en claro) |
+| vence_en | TIMESTAMPTZ | No | |
+| usada_en | TIMESTAMPTZ | Sí | Marca el registro consumido |
+| creado_en | TIMESTAMPTZ | No | `now()` |
+| actualizado_en | TIMESTAMPTZ | No | `now()` |
+
+La invitación es la fuente de verdad antes de que exista la cuenta: guarda el correo y los nombres del listado. Al registrarse se crea el usuario, se inserta la fila de `grupo_estudiante` y se marca `usada_en` en la misma transacción. El token solo viaja en el enlace de correo; en la base queda su hash.
 
 ## rol
 

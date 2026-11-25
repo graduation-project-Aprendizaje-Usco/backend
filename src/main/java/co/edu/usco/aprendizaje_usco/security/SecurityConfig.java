@@ -30,7 +30,8 @@ public class SecurityConfig {
     }
 
     /** Rutas donde se ignora el header Authorization (ver bearerTokenResolver). */
-    private static final Set<String> RUTAS_SIN_TOKEN = Set.of("/api/auth/login", "/api/auth/registro");
+    private static final Set<String> RUTAS_SIN_TOKEN = Set.of(
+            "/api/auth/login", "/api/auth/registro", "/api/auth/invitacion");
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http,
@@ -43,6 +44,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Solo login y registro son públicos; /api/auth/me exige token.
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/registro").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/auth/invitacion").permitAll()
                 .requestMatchers("/actuator/health",
                                  "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated())

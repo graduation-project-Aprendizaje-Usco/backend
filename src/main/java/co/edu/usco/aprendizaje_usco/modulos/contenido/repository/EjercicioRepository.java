@@ -5,6 +5,7 @@ import co.edu.usco.aprendizaje_usco.modulos.contenido.model.NivelDificultad;
 import co.edu.usco.aprendizaje_usco.modulos.contenido.model.TipoEjercicio;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -49,6 +50,11 @@ public interface EjercicioRepository extends JpaRepository<Ejercicio, Long> {
             left join fetch e.opciones
             where e.id = :id and e.creadoPor.id = :docenteId""")
     Optional<Ejercicio> findPropioConOpciones(@Param("id") Long id, @Param("docenteId") Long docenteId);
+
+    /** Catálogo del administrador: todos los ejercicios, sin opciones ni claves. */
+    @EntityGraph(attributePaths = {"contenido", "competencia", "creadoPor"})
+    @Query("select e from Ejercicio e order by e.codigo, e.id")
+    List<Ejercicio> findAllParaAdmin();
 
     @Query("""
             select distinct e from Ejercicio e

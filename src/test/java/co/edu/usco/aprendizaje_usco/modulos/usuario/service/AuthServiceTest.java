@@ -56,7 +56,7 @@ class AuthServiceTest {
         rolRepository = mock(RolRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
         authService = new AuthService(authenticationManager, jwtService, usuarioRepository,
-                rolRepository, passwordEncoder);
+                rolRepository, passwordEncoder, mock(InvitacionService.class), false);
 
         rolEstudiante = mock(Rol.class);
         when(rolEstudiante.getNombre()).thenReturn(NombreRol.ESTUDIANTE);

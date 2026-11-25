@@ -7,6 +7,7 @@ import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.AuthResponse;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.LoginRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.RegistroRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.UsuarioResponse;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Invitacion;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.NombreRol;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.ProgramaAcademico;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Rol;
@@ -17,6 +18,7 @@ import co.edu.usco.aprendizaje_usco.security.JwtService;
 import co.edu.usco.aprendizaje_usco.security.UsuarioAutenticado;
 import java.time.Duration;
 import java.time.Instant;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -38,15 +40,20 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
+    private final InvitacionService invitacionService;
+    private final boolean invitacionObligatoria;
 
     public AuthService(AuthenticationManager authenticationManager, JwtService jwtService,
                        UsuarioRepository usuarioRepository, RolRepository rolRepository,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder, InvitacionService invitacionService,
+                       @Value("${app.registro.invitacion-obligatoria:true}") boolean invitacionObligatoria) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.passwordEncoder = passwordEncoder;
+        this.invitacionService = invitacionService;
+        this.invitacionObligatoria = invitacionObligatoria;
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -65,10 +72,17 @@ public class AuthService {
         return new AuthResponse(token.valor(), AuthResponse.TIPO_BEARER, segundos, UsuarioResponse.desde(usuario));
     }
 
-    /** Registro público: siempre crea un ESTUDIANTE activo. */
+    /** Registro de estudiantes. En producción exige una invitación válida (#150). */
     @Transactional
     public UsuarioResponse registrar(RegistroRequest request) {
         String correo = Usuario.normalizarCorreo(request.correo());
+        Invitacion invitacion = null;
+        if (invitacionObligatoria || (request.tokenInvitacion() != null && !request.tokenInvitacion().isBlank())) {
+            if (request.tokenInvitacion() == null || request.tokenInvitacion().isBlank()) {
+                throw new ReglaNegocioException("El registro requiere una invitación válida");
+            }
+            invitacion = invitacionService.validarParaRegistro(request.tokenInvitacion(), correo);
+        }
         if (usuarioRepository.existsByCorreo(correo)) {
             throw new ConflictoException("El correo ya está registrado");
         }
@@ -82,7 +96,11 @@ public class AuthService {
 
         // saveAndFlush: si dos registros con el mismo correo llegan a la vez, la base
         // rechaza el segundo (uq_usuario_correo) y el GlobalExceptionHandler responde 409.
-        return UsuarioResponse.desde(usuarioRepository.saveAndFlush(usuario));
+        Usuario guardado = usuarioRepository.saveAndFlush(usuario);
+        if (invitacion != null) {
+            invitacionService.registrar(invitacion, guardado);
+        }
+        return UsuarioResponse.desde(guardado);
     }
 
     /** Usuario dueño del token. Si ya no existe o fue desactivado, la sesión deja de valer. */

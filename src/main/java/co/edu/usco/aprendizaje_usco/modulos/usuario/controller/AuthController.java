@@ -5,7 +5,9 @@ import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.AuthResponse;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.LoginRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.RegistroRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.UsuarioResponse;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.InvitacionPublicaResponse;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.service.AuthService;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.service.InvitacionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,9 +33,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final InvitacionService invitacionService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, InvitacionService invitacionService) {
         this.authService = authService;
+        this.invitacionService = invitacionService;
     }
 
     @PostMapping("/login")
@@ -60,6 +65,19 @@ public class AuthController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public UsuarioResponse registrar(@Valid @RequestBody RegistroRequest request) {
         return authService.registrar(request);
+    }
+
+    @GetMapping("/invitacion")
+    @SecurityRequirements
+    @Operation(summary = "Consultar una invitación por token",
+            description = "Público: permite precargar correo y nombres en la pantalla de registro.")
+    @ApiResponse(responseCode = "200", description = "Invitación vigente")
+    @ApiResponse(responseCode = "404", description = "Token inexistente",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "422", description = "Invitación vencida o ya utilizada",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public InvitacionPublicaResponse invitacion(@RequestParam String token) {
+        return invitacionService.obtenerPublica(token);
     }
 
     @GetMapping("/me")

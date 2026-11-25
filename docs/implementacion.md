@@ -1,4 +1,4 @@
-# Implementación del backend
+﻿# Implementación del backend
 
 Qué se ha construido, para qué sirve, qué decisiones se tomaron y cómo probarlo, **historia por historia**. Complementa al [README](README-backend.md) (cómo correr el proyecto y las convenciones) y a [tareas-y-responsables.md](tareas-y-responsables.md) (qué pide cada tarea). La parte visual está en `docs/implementacion.md` del frontend.
 
@@ -19,7 +19,16 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 | [Retroalimentación inmediata y registro de intentos](#4-retroalimentación-inmediata-y-registro-de-intentos-110-114) | 110, 114 | Juan David Polanco | En `develop` · ver README §13 |
 | Grupos docente–estudiante | SCRUM-159 | Fernando Pérez | En `develop` |
 | [Administración de usuarios](#10-administración-de-usuarios-scrum-45) | SCRUM-45 (108) | Jorel Vargas (implementación: Nicolás Pérez) | En `develop` |
-| [Panel del administrador](#11-panel-del-administrador-scrum-46) | SCRUM-46 | Fernando Pérez (implementación: Nicolás Pérez) | En `feature/panel-administracion` |
+| [Panel del administrador](#11-panel-del-administrador-scrum-46) | SCRUM-46 | Fernando Pérez (implementación: Nicolás Pérez) | En `develop` · verificado |
+| [Vistas de administración de grupos y actividades](#12-vistas-de-administración-de-grupos-y-actividades-scrum-46) | SCRUM-46 | Fernando Pérez (implementación: Nicolás Pérez) | En `develop` |
+| [Integración end-to-end de los módulos](#13-integración-end-to-end-de-los-módulos-140) | 140 | Juan David Polanco | Verificado en local; staging pendiente |
+| [Pruebas funcionales CA-01 a CA-16](#14-pruebas-funcionales-ca-01-a-ca-16-141) | 141 | Fernando Pérez | 16/16 cumplen con evidencia automatizada; revisión visual pendiente |
+| [Corrección de incidencias](#15-corrección-de-incidencias-142) | 142 | Juan David Polanco | Sin defectos altos abiertos; INC-01 corregida |
+| [Validación con usuarios piloto](#16-validación-con-usuarios-piloto-143) | 143 | Juan David Polanco | Protocolo y simulación interna listos; usuarios reales pendientes |
+| [Hardening de seguridad por rol](#17-hardening-de-seguridad-por-rol-148) | 148 | Jorel Vargas | Matriz endpoint × rol y cabeceras de seguridad implementadas |
+| [Prueba de concurrencia](#18-prueba-de-concurrencia-149) | 149 | Fernando Pérez | 50 envíos simultáneos verificados |
+| [Registro de estudiantes por invitación](#19-registro-de-estudiantes-por-invitación-150) | 150 | Jorel Vargas | Implementado en backend y frontend |
+| [Documentación técnica de la entrega](#20-documentación-técnica-de-la-entrega-146) | 146 | Nicolás Pérez | Arquitectura as-built, despliegue y guía de instalación |
 
 ---
 
@@ -318,11 +327,109 @@ Sin token responde 401 y con otro rol, 403.
 - **Ejercicios activos:** los que el motor puede asignar, es decir, el ejercicio activo y su contenido activo (el mismo criterio que `findActivosPorAsignatura`).
 - **Consultas derivadas de Spring Data** (`countByRol_NombreAndEstado`, `countByActivoTrue`…): con tres roles son seis conteos pequeños, y no hace falta una consulta a mano.
 - En el backlog figura como tarea solo de frontend, pero el administrador no tenía forma de consultar contenidos ni ejercicios (esos endpoints son del docente). Por eso hizo falta este endpoint.
+- **Enlaces a las pantallas de gestión:** el panel enlaza a Usuarios, Grupos y Actividades; las dos últimas son vistas de solo lectura (sección 12).
 
 **Pruebas.** En `AdminUsuarioControllerTest`: 403 para otro rol; un estudiante inactivo nuevo suma al total pero no a los activos; un grupo nuevo suma 1; los conteos de actividades coinciden con una consulta SQL directa.
+
+## 12. Vistas de administración de grupos y actividades (SCRUM-46)
+
+**Para qué.** Que el administrador no solo vea los conteos del panel, sino que pueda consultar los grupos de los docentes y el catálogo de contenidos y ejercicios.
+
+**Endpoints.**
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/grupos` | Lista todos los grupos cuando el token es ADMIN (para el docente, solo los suyos) | 200 · 401 · 403 |
+| `GET /api/grupos/{id}/estudiantes` | Estudiantes inscritos en un grupo; ADMIN puede consultar cualquiera | 200 · 401 · 403 · 404 |
+| `GET /api/admin/actividades` | Catálogo de contenidos y ejercicios de todos los docentes, sin claves ni explicaciones | 200 · 401 · 403 |
+
+**Decisiones.**
+
+- **Grupos sin endpoint nuevo:** el controlador de grupos ya permitía ADMIN; se reutiliza para la vista de solo lectura. El administrador no crea ni elimina grupos.
+- **Actividades sin respuestas correctas:** el DTO `AdminActividadesResponse` omite opciones, respuesta numérica, pista y explicación. El administrador consulta la gestión, pero no recibe las claves.
+- **Datos semilla:** los contenidos y ejercicios con `creado_por = null` se muestran como “Semilla”.
+
+**Archivos.** `modulos/contenido/controller/AdminActividadesController.java`, `service/AdminActividadesService.java`, `dto/AdminActividadesResponse.java` y las consultas `findAllParaAdmin` de los repositorios de contenidos y ejercicios.
+
+**Pruebas.** `AdminActividadesControllerTest`: 401 sin token, 403 para DOCENTE y ESTUDIANTE, catálogo completo y ausencia de claves. `GrupoControllerTest` ya cubre el acceso ADMIN a los grupos.
+
+## 13. Integración end-to-end de los módulos (140)
+
+**Para qué.** Comprobar que los módulos comparten usuarios, roles y datos, y que los tres flujos completos funcionan sin intervención manual en la base.
+
+**Prueba automatizada.** `FlujosCompletosE2ETest` usa Testcontainers, MockMvc y login real:
+- Administrador: crea docente y estudiante con contraseña temporal, los desactiva y reactiva, y consulta panel y catálogo.
+- Docente: crea un grupo, inscribe al estudiante y consulta su analítica e historial.
+- Estudiante: presenta los 24 ítems del diagnóstico, resuelve tres ejercicios de práctica y consulta progreso e historial.
+
+**Validación manual.** `docs/pruebas/e2e-sprint-4.md` deja el guion y el resultado local. **Staging queda pendiente de #33**: el criterio de aceptación de #140 se cierra cuando exista el entorno y se repita el mismo recorrido.
+
+## 14. Pruebas funcionales CA-01 a CA-16 (141)
+
+**Para qué.** Ejecutar y documentar los 16 criterios de aceptación con evidencia y actualizar la matriz de trazabilidad.
+
+- CA-01..CA-16 se mapearon a RF-01..RF-16.
+- La matriz detallada está en [`docs/pruebas/matriz-aceptacion-ca.md`](pruebas/matriz-aceptacion-ca.md).
+- Resultado local: **16/16 cumplen** con evidencia automatizada y revisión de código.
+- Backend: `.\mvnw.cmd verify` → **285 pruebas, 0 fallos**.
+- Frontend: `npm run lint`, `npm test` → **122 pruebas**, y `npm run build`.
+- La revisión visual y con usuarios reales queda para #143.
+
+## 15. Corrección de incidencias (142)
+
+**Para qué.** Priorizar y corregir los defectos encontrados en la ejecución funcional.
+
+- **INC-01** corregida: «Roles y permisos» ya no es una página en construcción; explica los roles y enlaza a Usuarios con el filtro correspondiente (`RolesPage.jsx` y su prueba).
+- Sin defectos de prioridad Alta o Media abiertos.
+- Bloqueos externos: staging (#33) y participantes reales (#143).
+- Registro completo en [`docs/pruebas/registro-incidencias.md`](pruebas/registro-incidencias.md).
+
+## 16. Validación con usuarios piloto (143)
+
+**Para qué.** Aplicar el protocolo de usabilidad con estudiantes y docentes.
+
+- Protocolo: [`docs/pruebas/protocolo-usabilidad.md`](pruebas/protocolo-usabilidad.md).
+- Consentimiento: [`docs/pruebas/consentimiento-informado.md`](pruebas/consentimiento-informado.md).
+- Observaciones: [`docs/pruebas/observaciones-piloto.md`](pruebas/observaciones-piloto.md).
+- Se ejecutó una **simulación técnica interna** con las pruebas E2E y de componente; no sustituye a los usuarios reales.
+- **Pendiente manual:** reclutar 4–6 participantes, firmar consentimientos, ejecutar las sesiones, aplicar el SUS (#144) y repetir en staging.
+
+## 17. Hardening de seguridad por rol (148)
+
+**Para qué.** Revisar autenticación, autorización, validación de entradas, exposición de datos y cabeceras.
+
+- `SecurityHeadersFilter` agrega `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y `Cache-Control: no-store` en `/api/**`.
+- `MatrizSeguridadTest`: 401 sin token, 200/403 por rol y verificación de que no se exponen `passwordHash`, `esCorrecta`, `respuestaNumerica` ni `explicacion`.
+- `SecurityHeadersTest` verifica las cabeceras.
+- `ProteccionDeEndpointsTest` sigue garantizando `@PreAuthorize` en todos los controladores.
+- **Pendiente manual:** rotar secretos de staging y confirmar que no hay credenciales versionadas. Ver [`docs/pruebas/hardening-seguridad.md`](pruebas/hardening-seguridad.md).
+
+## 18. Prueba de concurrencia (149)
+
+**Para qué.** Verificar que 50 envíos simultáneos del mismo intento no duplican registros.
+
+`ConcurrenciaEnviosTest` ejecuta 50 hilos con la misma clave de idempotencia en práctica y 50 respuestas simultáneas al mismo ítem del diagnóstico. Resultado: **un solo `intento_practica` y una sola `respuesta_diagnostico`**.
+
+## 19. Registro de estudiantes por invitación (150)
+
+**Para qué.** Cerrar el registro público: solo los estudiantes invitados por un docente pueden crear su cuenta.
+
+- Nueva tabla `invitacion` (correo, nombres, apellidos, grupo, hash del token, vencimiento y uso).
+- El docente carga el listado CSV, ve el estado (`INVITADO`, `REGISTRADO`, `VENCIDA`) y puede reenviar.
+- `POST /api/auth/registro` exige token válido, no usado, con el mismo correo; en la misma transacción crea el usuario, lo inscribe en el grupo y consume la invitación.
+- Correo por SMTP si `MAIL_HOST`, `MAIL_USERNAME` y `MAIL_PASSWORD` están configurados (Gmail usa `smtp.gmail.com`, puerto 587 y STARTTLS); en local/tests se registra el enlace (no-op).
+- Endpoints: `GET/POST /api/grupos/{id}/invitaciones`, `POST /api/grupos/{id}/invitaciones/{id}/reenviar` y `GET /api/auth/invitacion?token=`.
+- Frontend: `/docente/estudiantes` para cargar el listado y `/registro?token=…` para el estudiante.
+- **Configuración:** `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SMTP_AUTH`, `MAIL_STARTTLS`, `MAIL_HEALTH_ENABLED`, `MAIL_FROM` (opcional) y `FRONTEND_URL`.
+- **Pruebas:** `InvitacionControllerTest` cubre invitación vigente, usada, vencida, correo distinto y docente ajeno.
+
+## 20. Documentación técnica de la entrega (146)
+
+La arquitectura as-built, el diagrama de despliegue, las variables de entorno y la guía de instalación están en [`docs/entrega/arquitectura-despliegue.md`](entrega/arquitectura-despliegue.md). Staging sigue pendiente de #33; cuando exista se agregarán sus URLs y el proceso de despliegue real.
 
 ---
 
 ## Pendientes conocidos
 
-- **Staging (SCRUM-13):** sin él, la verificación manual y las pruebas con usuarios piloto se hacen en local.
+- **Staging (SCRUM-13):** sin él, la verificación manual y las pruebas con usuarios piloto se hacen en local. La integración end-to-end (#140) y la matriz CA-01 a CA-16 (#141) quedaron verificadas en local y pendientes de repetirse en staging.
+- **Usuarios piloto:** #143 tiene protocolo y simulación interna, pero requiere 4–6 participantes reales y el SUS de #144.
