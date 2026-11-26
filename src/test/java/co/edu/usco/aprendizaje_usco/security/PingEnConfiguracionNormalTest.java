@@ -19,13 +19,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Hallazgo 4 de la revisión: /api/ping/{rol} es solo para desarrollo y pruebas.
- * Sin los perfiles dev o test (como en staging y producción) no existe.
+ * Hallazgo 4 de la revisión: /api/ping/{rol} solo existe en las pruebas.
+ * En la configuración normal no se registra.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
-class PingFueraDeDevTest {
+class PingEnConfiguracionNormalTest {
 
     @Autowired
     private ApplicationContext contexto;
@@ -37,12 +37,12 @@ class PingFueraDeDevTest {
     private JwtService jwtService;
 
     @Test
-    void sinPerfilDevNiTestNoSeRegistraElPing() {
+    void sinPerfilTestNoSeRegistraElPing() {
         assertThat(contexto.getBeanNamesForType(PingController.class)).isEmpty();
     }
 
     @Test
-    void sinPerfilDevNiTestLaRutaDelPingResponde404() throws Exception {
+    void sinPerfilTestLaRutaDelPingResponde404() throws Exception {
         String token = jwtService.emitir(admin()).valor();
 
         mockMvc.perform(get("/api/ping/ADMIN").header("Authorization", "Bearer " + token))

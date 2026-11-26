@@ -19,10 +19,12 @@ import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Usuario;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.GrupoRepository;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.RolRepository;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.UsuarioRepository;
+import java.util.Base64;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,27 +33,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminUsuarioService {
 
-    // Sin 0/O, 1/l/I para que la contraseña temporal se pueda dictar o copiar sin confusiones.
-    private static final String ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-    private static final int LARGO_PASSWORD_TEMPORAL = 12;
-
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final GrupoRepository grupoRepository;
     private final ContenidoRepository contenidoRepository;
     private final EjercicioRepository ejercicioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ActivacionCuentaService activacionCuentaService;
     private final SecureRandom aleatorio = new SecureRandom();
 
     public AdminUsuarioService(UsuarioRepository usuarioRepository, RolRepository rolRepository,
                                GrupoRepository grupoRepository, ContenidoRepository contenidoRepository,
-                               EjercicioRepository ejercicioRepository, PasswordEncoder passwordEncoder) {
+                               EjercicioRepository ejercicioRepository, PasswordEncoder passwordEncoder,
+                               ActivacionCuentaService activacionCuentaService) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.grupoRepository = grupoRepository;
         this.contenidoRepository = contenidoRepository;
         this.ejercicioRepository = ejercicioRepository;
         this.passwordEncoder = passwordEncoder;
+        this.activacionCuentaService = activacionCuentaService;
     }
 
     /** Conteos del panel del administrador (SCRUM-46). */
@@ -70,8 +71,11 @@ public class AdminUsuarioService {
     public List<UsuarioAdminResponse> listar(String buscar, NombreRol rol, EstadoUsuario estado) {
         String texto = buscar == null || buscar.isBlank()
                 ? null : "%" + buscar.trim().toLowerCase(Locale.ROOT) + "%";
-        return usuarioRepository.buscarParaAdmin(rol, estado, texto).stream()
-                .map(UsuarioAdminResponse::desde)
+        List<Usuario> encontrados = usuarioRepository.buscarParaAdmin(rol, estado, texto);
+        Set<Long> pendientes = Set.copyOf(activacionCuentaService.usuariosPendientes(
+                encontrados.stream().map(Usuario::getId).toList()));
+        return encontrados.stream()
+                .map(usuario -> UsuarioAdminResponse.desde(usuario, pendientes.contains(usuario.getId())))
                 .toList();
     }
 
@@ -82,13 +86,14 @@ public class AdminUsuarioService {
             throw new ConflictoException("El correo ya está registrado");
         }
         String programa = programaParaRol(request.rol(), correo, request.programaAcademico());
-        String passwordTemporal = generarPasswordTemporal();
+        String claveAleatoria = generarClaveAleatoria();
         Usuario usuario = new Usuario(request.nombres().trim(), request.apellidos().trim(), correo,
-                passwordEncoder.encode(passwordTemporal), rol(request.rol()));
+                passwordEncoder.encode(claveAleatoria), rol(request.rol()));
         usuario.setProgramaAcademico(programa);
         // saveAndFlush: si llega el mismo correo a la vez, uq_usuario_correo responde 409.
-        return new UsuarioCreadoResponse(UsuarioAdminResponse.desde(usuarioRepository.saveAndFlush(usuario)),
-                passwordTemporal);
+        usuarioRepository.saveAndFlush(usuario);
+        activacionCuentaService.crearYEnviar(usuario);
+        return new UsuarioCreadoResponse(UsuarioAdminResponse.desde(usuario, true));
     }
 
     @Transactional
@@ -102,7 +107,8 @@ public class AdminUsuarioService {
         usuario.setNombres(request.nombres().trim());
         usuario.setApellidos(request.apellidos().trim());
         usuario.setRol(rol(request.rol()));
-        return UsuarioAdminResponse.desde(usuario);
+        return UsuarioAdminResponse.desde(usuario, activacionCuentaService.usuariosPendientes(List.of(usuarioId))
+                .contains(usuarioId));
     }
 
     @Transactional
@@ -116,7 +122,14 @@ public class AdminUsuarioService {
         } else {
             usuario.desactivar();
         }
-        return UsuarioAdminResponse.desde(usuario);
+        return UsuarioAdminResponse.desde(usuario, activacionCuentaService.usuariosPendientes(List.of(usuarioId))
+                .contains(usuarioId));
+    }
+
+    @Transactional
+    public void reenviarActivacion(Long usuarioId) {
+        buscar(usuarioId);
+        activacionCuentaService.reenviar(usuarioId);
     }
 
     private Usuario buscar(Long usuarioId) {
@@ -146,15 +159,9 @@ public class AdminUsuarioService {
     }
 
     /** Cumple las reglas del registro: al menos una letra y un número. */
-    private String generarPasswordTemporal() {
-        String password;
-        do {
-            StringBuilder sb = new StringBuilder(LARGO_PASSWORD_TEMPORAL);
-            for (int i = 0; i < LARGO_PASSWORD_TEMPORAL; i++) {
-                sb.append(ALFABETO.charAt(aleatorio.nextInt(ALFABETO.length())));
-            }
-            password = sb.toString();
-        } while (!password.matches(RegistroRequest.PATRON_PASSWORD));
-        return password;
+    private String generarClaveAleatoria() {
+        byte[] bytes = new byte[32];
+        aleatorio.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }

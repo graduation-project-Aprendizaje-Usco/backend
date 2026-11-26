@@ -39,7 +39,7 @@ Los umbrales se evalúan por etiqueta para no contaminar la medición con el set
 
 ## 3. Cómo ejecutarlo
 
-Con el backend en perfil `dev` y Docker Desktop abierto:
+Con el backend usando la configuración local de `.env` y Docker Desktop abierto:
 
 ```powershell
 docker run --rm -i `

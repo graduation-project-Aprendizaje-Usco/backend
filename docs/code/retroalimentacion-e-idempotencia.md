@@ -313,7 +313,7 @@ Las pruebas del panel comprueban la etiqueta “Pista”/“Explicación”, el 
 
 ## 9. Verificación manual
 
-1. Levantar backend con perfil `dev` y frontend con `npm run dev`.
+1. Levantar backend con la configuración local de `.env` y frontend con `npm run dev`.
 2. Entrar con `estudiante@aprendizaje.test` / `Estudiante2026*`.
 3. Abrir **Práctica**.
 4. Pulsar **Ver pista**: debe verse la pista y el intento debe llevar `pistaUsada: true`.

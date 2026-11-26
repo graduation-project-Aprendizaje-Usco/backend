@@ -52,24 +52,22 @@ services:
 
 # Backend en Docker. Si vas a correr el backend con mvnw, levanta solo
 # `docker compose up -d postgres pgadmin` para no ocupar el puerto 8080.
+
   backend:
     build: .
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     env_file:
       - .env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${SPRING_DATASOURCE_DB}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
-      # Perfil dev = migraciones + usuarios de prueba. En staging/producción se define otro valor.
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_FLYWAY_LOCATIONS: ${SPRING_FLYWAY_LOCATIONS:-classpath:db/migration}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     ports:
       - '127.0.0.1:8080:8080'
+
 
 volumes:
   pgadmin_data:

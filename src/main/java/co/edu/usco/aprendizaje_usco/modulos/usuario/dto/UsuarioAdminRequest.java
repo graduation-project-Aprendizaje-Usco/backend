@@ -9,7 +9,8 @@ import jakarta.validation.constraints.Size;
 
 /**
  * Cuerpo de POST /api/admin/usuarios. La contraseña no se recibe: el servidor
- * genera una temporal. Para un ESTUDIANTE el correo debe ser de estudiante y el
+ * genera una clave aleatoria no compartida hasta que configure la suya por correo.
+ * Para un ESTUDIANTE el correo debe ser de estudiante y el
  * programa académico es obligatorio (lo valida AdminUsuarioService).
  */
 public record UsuarioAdminRequest(

@@ -14,12 +14,17 @@ public record UsuarioAdminResponse(
         NombreRol rol,
         String programaAcademico,
         EstadoUsuario estado,
-        Instant creadoEn) {
+        Instant creadoEn,
+        boolean configuracionPendiente) {
 
     /** Llamar dentro de una transacción: el rol del usuario se carga de forma diferida. */
     public static UsuarioAdminResponse desde(Usuario usuario) {
+        return desde(usuario, false);
+    }
+
+    public static UsuarioAdminResponse desde(Usuario usuario, boolean configuracionPendiente) {
         return new UsuarioAdminResponse(usuario.getId(), usuario.getNombres(), usuario.getApellidos(),
                 usuario.getCorreo(), usuario.getRol().getNombre(), usuario.getProgramaAcademico(),
-                usuario.getEstado(), usuario.getCreadoEn());
+                usuario.getEstado(), usuario.getCreadoEn(), configuracionPendiente);
     }
 }

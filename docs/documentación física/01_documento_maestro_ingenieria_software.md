@@ -352,9 +352,8 @@ aprendizaje-usco-backend/
 │       └── contenido/  # Entidades de contenido y ejercicio
 ├── src/main/resources/
 │   ├── db/migration/   # Migraciones Flyway
-│   ├── db/dev-data/    # Datos de prueba (perfil dev)
+│   ├── db/dev-data/    # Datos de prueba (ubicación Flyway local opcional)
 │   ├── application.properties
-│   └── application-dev.properties
 └── pom.xml
 ```
 
@@ -539,7 +538,7 @@ PostgreSQL 17. El esquema se gestiona exclusivamente con Flyway; Hibernate solo 
 | `V5__esquema_practica.sql` | Tablas de práctica adaptativa. |
 | `V6__datos_ejercicios_semilla.sql` | 90 ejercicios semilla. |
 | `V7__crear_grupos_docentes_estudiantes.sql` | Tablas de grupos y asociación docente-estudiante. |
-| `R__usuarios_de_prueba.sql` | Usuarios de prueba (solo perfil dev). |
+| `R__usuarios_de_prueba.sql` | Usuarios de prueba (solo si la ubicación se activa en el entorno local). |
 
 ### 10.4 Datos personales y académicos
 
@@ -639,7 +638,7 @@ Toda la comunicación entre frontend y backend se realiza mediante JSON sobre HT
 ### 13.4 Gestión de secretos
 
 - `JWT_SECRET` se define fuera del repositorio.
-- El perfil `dev` usa una clave pública conocida solo para desarrollo local.
+- La llave JWT local se define en `.env`; usa una llave aleatoria distinta en despliegues.
 - `.env` y `.env.development` están en `.gitignore`.
 
 ---

@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 
 import co.edu.usco.aprendizaje_usco.TestcontainersConfiguration;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.GrupoRequest;
@@ -19,6 +21,12 @@ import co.edu.usco.aprendizaje_usco.modulos.usuario.service.GrupoService;
 import co.edu.usco.aprendizaje_usco.security.JwtService;
 import co.edu.usco.aprendizaje_usco.security.UsuarioAutenticado;
 import com.jayway.jsonpath.JsonPath;
+import jakarta.persistence.EntityManager;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.mockito.ArgumentCaptor;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,11 +36,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
+@SpringBootTest(properties = {"MAIL_HOST=smtp.test", "MAIL_USERNAME=test-user", "MAIL_PASSWORD=test-password"})
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
@@ -57,6 +66,12 @@ class AdminUsuarioControllerTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private EntityManager entityManager;
+
+    @MockitoBean
+    private JavaMailSender mailSender;
+
     private Usuario admin;
     private Usuario docente;
     private Usuario estudiante;
@@ -71,6 +86,8 @@ class AdminUsuarioControllerTest {
     @Test
     void sinTokenResponde401YOtrosRolesReciben403EnTodosLosEndpoints() throws Exception {
         mockMvc.perform(get("/api/admin/usuarios")).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/admin/usuarios/{id}/reenviar-activacion", estudiante.getId()))
+                .andExpect(status().isUnauthorized());
         for (Usuario noAdmin : new Usuario[] {docente, estudiante}) {
             String token = bearer(noAdmin);
             mockMvc.perform(get("/api/admin/usuarios").header("Authorization", token))
@@ -81,6 +98,9 @@ class AdminUsuarioControllerTest {
                             .header("Authorization", token))
                     .andExpect(status().isForbidden());
             mockMvc.perform(json(patch("/api/admin/usuarios/{id}/estado", estudiante.getId()), "{\"estado\":\"INACTIVO\"}")
+                            .header("Authorization", token))
+                    .andExpect(status().isForbidden());
+            mockMvc.perform(post("/api/admin/usuarios/{id}/reenviar-activacion", estudiante.getId())
                             .header("Authorization", token))
                     .andExpect(status().isForbidden());
         }
@@ -106,22 +126,82 @@ class AdminUsuarioControllerTest {
     }
 
     @Test
-    void creaUnDocenteConContrasenaTemporalConLaQuePuedeIniciarSesion() throws Exception {
+    void creaUnDocenteSinDevolverContrasenaYPermiteConfigurarlaUnaSolaVez() throws Exception {
         String respuesta = mockMvc.perform(json(post("/api/admin/usuarios"), nuevoDocente("Nuevo.Docente@USCO.edu.co"))
                         .header("Authorization", bearer(admin)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.usuario.correo").value("nuevo.docente@usco.edu.co"))
                 .andExpect(jsonPath("$.usuario.rol").value("DOCENTE"))
                 .andExpect(jsonPath("$.usuario.estado").value("ACTIVO"))
+                .andExpect(jsonPath("$.usuario.configuracionPendiente").value(true))
+                .andExpect(jsonPath("$.passwordTemporal").doesNotExist())
+                .andExpect(jsonPath("$.token").doesNotExist())
                 .andExpect(jsonPath("$.usuario.programaAcademico").doesNotExist())
                 .andReturn().getResponse().getContentAsString();
-        String temporal = JsonPath.read(respuesta, "$.passwordTemporal");
-        assertThat(temporal).hasSize(12).matches(".*\\p{L}.*").matches(".*\\d.*");
+        Number usuarioId = JsonPath.read(respuesta, "$.usuario.id");
+        String token = tokenDelCorreo("nuevo.docente@usco.edu.co");
+        String hashGuardado = jdbcTemplate.queryForObject(
+                "select token_hash from activacion_cuenta where usuario_id = ?", String.class, usuarioId.longValue());
+        assertThat(hashGuardado).hasSize(64).doesNotContain(token);
 
         mockMvc.perform(json(post("/api/auth/login"),
-                        "{\"correo\":\"nuevo.docente@usco.edu.co\",\"password\":\"" + temporal + "\"}"))
+                        "{\"correo\":\"nuevo.docente@usco.edu.co\",\"password\":\"ClaveInicial2026\"}"))
+                .andExpect(status().isUnauthorized());
+        activarCuenta(token, "ClaveInicial2026");
+        mockMvc.perform(json(post("/api/auth/login"),
+                        "{\"correo\":\"nuevo.docente@usco.edu.co\",\"password\":\"ClaveInicial2026\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.usuario.rol").value("DOCENTE"));
+        mockMvc.perform(json(post("/api/auth/activar-cuenta"),
+                        "{\"token\":\"" + token + "\",\"password\":\"ClaveOtra2026\"}"))
+                .andExpect(status().is(422));
+        mockMvc.perform(get("/api/admin/usuarios").param("buscar", "nuevo.docente")
+                        .header("Authorization", bearer(admin)))
+                .andExpect(jsonPath("$[0].configuracionPendiente").value(false));
+    }
+
+    @Test
+    void reenviaElEnlacePendienteYElAnteriorDejaDeSerValido() throws Exception {
+        String respuesta = mockMvc.perform(json(post("/api/admin/usuarios"), nuevoDocente("reenvio@usco.edu.co"))
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        Number usuarioId = JsonPath.read(respuesta, "$.usuario.id");
+        String tokenAnterior = tokenDelCorreo("reenvio@usco.edu.co");
+
+        mockMvc.perform(post("/api/admin/usuarios/{id}/reenviar-activacion", usuarioId.longValue())
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isNoContent());
+        String tokenNuevo = tokenDelCorreo("reenvio@usco.edu.co");
+
+        mockMvc.perform(json(post("/api/auth/activar-cuenta"),
+                        "{\"token\":\"" + tokenAnterior + "\",\"password\":\"ClaveInicial2026\"}"))
+                .andExpect(status().isNotFound());
+        activarCuenta(tokenNuevo, "ClaveInicial2026");
+        mockMvc.perform(post("/api/admin/usuarios/{id}/reenviar-activacion", usuarioId.longValue())
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void enlaceVencidoNoSeConsumeYPuedeRenovarseDesdeAdministracion() throws Exception {
+        String respuesta = mockMvc.perform(json(post("/api/admin/usuarios"), nuevoDocente("vencido@usco.edu.co"))
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        Number usuarioId = JsonPath.read(respuesta, "$.usuario.id");
+        String tokenVencido = tokenDelCorreo("vencido@usco.edu.co");
+        jdbcTemplate.update("update activacion_cuenta set vence_en = now() - interval '1 minute' where usuario_id = ?",
+                usuarioId.longValue());
+        entityManager.clear();
+
+        mockMvc.perform(json(post("/api/auth/activar-cuenta"),
+                        "{\"token\":\"" + tokenVencido + "\",\"password\":\"ClaveInicial2026\"}"))
+                .andExpect(status().isUnprocessableContent());
+        mockMvc.perform(post("/api/admin/usuarios/{id}/reenviar-activacion", usuarioId.longValue())
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isNoContent());
+        activarCuenta(tokenDelCorreo("vencido@usco.edu.co"), "ClaveInicial2026");
     }
 
     @Test
@@ -131,10 +211,10 @@ class AdminUsuarioControllerTest {
                 .andExpect(status().isConflict());
         mockMvc.perform(json(post("/api/admin/usuarios"),
                         nuevo("eva.otra@usco.edu.co", "ESTUDIANTE", "Ingeniería Civil")).header("Authorization", token))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().is(422));
         mockMvc.perform(json(post("/api/admin/usuarios"), nuevo("u20250000002@usco.edu.co", "ESTUDIANTE", null))
                         .header("Authorization", token))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().is(422));
         mockMvc.perform(json(post("/api/admin/usuarios"), "{\"nombres\":\"\",\"correo\":\"no-es-correo\"}")
                         .header("Authorization", token))
                 .andExpect(status().isBadRequest());
@@ -154,19 +234,20 @@ class AdminUsuarioControllerTest {
 
     @Test
     void unUsuarioDesactivadoNoPuedeIniciarSesionYAlReactivarloSi() throws Exception {
-        String temporal = JsonPath.read(mockMvc.perform(json(post("/api/admin/usuarios"), nuevoDocente("temporal@usco.edu.co"))
+        String respuesta = mockMvc.perform(json(post("/api/admin/usuarios"), nuevoDocente("temporal@usco.edu.co"))
                         .header("Authorization", bearer(admin)))
-                .andReturn().getResponse().getContentAsString(), "$.passwordTemporal");
-        Long id = usuarioRepository.findByCorreo("temporal@usco.edu.co").orElseThrow().getId();
-        String login = "{\"correo\":\"temporal@usco.edu.co\",\"password\":\"" + temporal + "\"}";
+                .andReturn().getResponse().getContentAsString();
+        Number id = JsonPath.read(respuesta, "$.usuario.id");
+        activarCuenta(tokenDelCorreo("temporal@usco.edu.co"), "ClaveInicial2026");
+        String login = "{\"correo\":\"temporal@usco.edu.co\",\"password\":\"ClaveInicial2026\"}";
 
-        mockMvc.perform(json(patch("/api/admin/usuarios/{id}/estado", id), "{\"estado\":\"INACTIVO\"}")
+        mockMvc.perform(json(patch("/api/admin/usuarios/{id}/estado", id.longValue()), "{\"estado\":\"INACTIVO\"}")
                         .header("Authorization", bearer(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value("INACTIVO"));
         mockMvc.perform(json(post("/api/auth/login"), login)).andExpect(status().isUnauthorized());
 
-        mockMvc.perform(json(patch("/api/admin/usuarios/{id}/estado", id), "{\"estado\":\"ACTIVO\"}")
+        mockMvc.perform(json(patch("/api/admin/usuarios/{id}/estado", id.longValue()), "{\"estado\":\"ACTIVO\"}")
                 .header("Authorization", bearer(admin)));
         mockMvc.perform(json(post("/api/auth/login"), login)).andExpect(status().isOk());
     }
@@ -175,11 +256,11 @@ class AdminUsuarioControllerTest {
     void elAdministradorNoPuedeDesactivarseNiQuitarseElRol() throws Exception {
         mockMvc.perform(json(patch("/api/admin/usuarios/{id}/estado", admin.getId()), "{\"estado\":\"INACTIVO\"}")
                         .header("Authorization", bearer(admin)))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().is(422))
                 .andExpect(jsonPath("$.message").value("No puedes desactivar tu propia cuenta"));
         mockMvc.perform(json(put("/api/admin/usuarios/{id}", admin.getId()), edicion("DOCENTE", null))
                         .header("Authorization", bearer(admin)))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().is(422));
         Usuario guardado = usuarioRepository.findByCorreo("ada.admin@usco.edu.co").orElseThrow();
         assertThat(guardado.estaActivo()).isTrue();
         assertThat(guardado.getRol().getNombre()).isEqualTo(NombreRol.ADMIN);
@@ -249,5 +330,26 @@ class AdminUsuarioControllerTest {
 
     private String bearer(Usuario usuario) {
         return "Bearer " + jwtService.emitir(UsuarioAutenticado.desde(usuario)).valor();
+    }
+
+    private void activarCuenta(String token, String password) throws Exception {
+        mockMvc.perform(json(post("/api/auth/activar-cuenta"),
+                        "{\"token\":\"" + token + "\",\"password\":\"" + password + "\"}"))
+                .andExpect(status().isNoContent());
+    }
+
+    private String tokenDelCorreo(String correo) {
+        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender, atLeastOnce()).send(captor.capture());
+        return captor.getAllValues().stream()
+                .filter(mensaje -> mensaje.getTo() != null && java.util.List.of(mensaje.getTo()).contains(correo))
+                .map(SimpleMailMessage::getText)
+                .map(texto -> {
+                    Matcher matcher = Pattern.compile("token=([A-Za-z0-9_-]+)").matcher(texto);
+                    return matcher.find() ? matcher.group(1) : null;
+                })
+                .filter(java.util.Objects::nonNull)
+                .reduce((primero, ultimo) -> ultimo)
+                .orElseThrow(() -> new AssertionError("El correo no contenía enlace de activación para " + correo));
     }
 }

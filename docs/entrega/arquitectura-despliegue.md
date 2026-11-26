@@ -1,6 +1,6 @@
 # Arquitectura y despliegue as-built (#146)
 
-**Estado:** arquitectura local verificada. Staging pendiente de #33.
+**Estado:** arquitectura local verificada. Configuración preparada para Render + Neon; URL pública pendiente de configurar.
 
 ## 1. Vista general
 
@@ -15,7 +15,7 @@ flowchart LR
 
 - **Frontend:** React 19, Vite 8, React Router 8, MUI, Axios, Recharts, KaTeX.
 - **Backend:** Spring Boot 4.1, Java 21, Spring Security + OAuth2 Resource Server, Spring Data JPA, Flyway, Springdoc.
-- **Base de datos:** PostgreSQL 17. Flyway es la única fuente del esquema; Hibernate solo valida (`ddl-auto: validate`).
+- **Base de datos:** PostgreSQL 17 (Docker local; Neon en producción). Flyway es la única fuente del esquema; Hibernate solo valida (`ddl-auto: validate`).
 - **Correo:** integración SMTP opcional para invitaciones. Sin `MAIL_HOST`, `MAIL_USERNAME` y `MAIL_PASSWORD`, el backend registra el enlace en el log (modo local/test).
 
 ## 2. Módulos implementados
@@ -49,16 +49,18 @@ El detalle está en [`docs/base-de-datos/modelo-fisico.md`](../base-de-datos/mod
 
 | Variable | Uso |
 |---|---|
-| `SPRING_PROFILES_ACTIVE` | Perfil (`dev` en local; `staging`/`prod` en despliegue) |
-| `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Conexión a PostgreSQL |
+| `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Conexión a PostgreSQL (`.env` / Docker Compose o variables de Render); Neon requiere `sslmode=require` |
+| `SPRING_FLYWAY_LOCATIONS` | Ubicaciones Flyway; local incluye `classpath:db/dev-data`, Render usa solo `classpath:db/migration` |
+| `SPRING_DOCKER_COMPOSE_ENABLED` | `true` para iniciar Compose en local con Maven; `false` en Render |
 | `JWT_SECRET` | Llave HS256, mínimo 32 caracteres |
 | `JWT_EXPIRATION_MINUTES` | Duración del token (por defecto 120) |
-| `CORS_ORIGINS` | Orígenes permitidos del frontend |
+| `CORS_ORIGINS` | Orígenes permitidos del frontend en local/staging |
+| `FRONTEND_URL` | Origen del frontend en producción: CORS y enlaces `/registro?token=…` (sin barra final) |
+| `PORT` | Puerto HTTP que asigna Render; la app lo lee automáticamente |
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP de invitaciones (Gmail: `smtp.gmail.com` / `587` / contraseña de aplicación) |
 | `MAIL_SMTP_AUTH` / `MAIL_STARTTLS` | Autenticación y STARTTLS del SMTP |
 | `MAIL_HEALTH_ENABLED` | Incluir el correo en `/actuator/health` (por defecto `false`) |
 | `MAIL_FROM` | Remitente; si se omite, usa `MAIL_USERNAME` |
-| `FRONTEND_URL` | URL usada para armar el enlace `/registro?token=…` |
 
 ### Frontend
 
@@ -90,16 +92,24 @@ Comprobaciones:
 - Swagger: http://localhost:8080/swagger-ui.html.
 - Frontend: http://localhost:5173.
 
-Usuarios de prueba (`dev`): `estudiante@aprendizaje.test`, `docente@aprendizaje.test`, `admin@aprendizaje.test`; contraseñas en el README del backend.
+Usuarios de prueba locales (cargados si `.env` incluye `db/dev-data`): `estudiante@aprendizaje.test`, `docente@aprendizaje.test`, `admin@aprendizaje.test`; contraseñas en el README del backend.
 
 ## 6. Despliegue
 
-### Backend
+### Backend (Render + Neon)
 
-1. Definir variables de entorno (base, JWT, CORS, correo).
-2. Ejecutar `.\mvnw.cmd -DskipTests package` o usar el `Dockerfile`.
-3. Configurar el perfil de staging y verificar `/actuator/health`.
-4. Ejecutar las migraciones Flyway al arrancar.
+1. Crear la base en Neon y copiar host, puerto, base, usuario y contraseña.
+2. En Render, definir `SPRING_DATASOURCE_URL` con `sslmode=require`,
+   `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`,
+   `FRONTEND_URL` y `SPRING_DOCKER_COMPOSE_ENABLED=false`.
+   No incluir `db/dev-data` en `SPRING_FLYWAY_LOCATIONS`.
+3. Usar el `Dockerfile` del repositorio o un build nativo con
+   `./mvnw clean package -DskipTests` y `java -jar target/*.jar`.
+4. Configurar el health check en `/actuator/health`.
+5. Flyway aplica las migraciones al arrancar; Hibernate solo valida
+   (`ddl-auto=validate`) y `clean-disabled=true`.
+
+Guía completa: [despliegue-render.md](../despliegue-render.md).
 
 ### Frontend
 
@@ -109,6 +119,6 @@ Usuarios de prueba (`dev`): `estudiante@aprendizaje.test`, `docente@aprendizaje.
 
 ### Pendiente
 
-- URL real de staging y proveedor de hosting (#33).
-- Rotación de secretos y verificación de CORS en staging.
-- Repetir la validación de los flujos E2E y la matriz CA en staging.
+- Crear el servicio en Render, configurar las variables reales y obtener la URL pública.
+- Configurar `FRONTEND_URL` con el dominio real de Vercel y verificar CORS.
+- Rotar secretos y repetir la validación de los flujos E2E y la matriz CA en el entorno desplegado.

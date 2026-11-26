@@ -67,7 +67,7 @@ Se actualiza con cada historia que entra a `develop`: una sección nueva, o la e
 - **El login y el registro ignoran el header `Authorization`.** Si el navegador guardó un token vencido, el estudiante igual puede volver a entrar (si no, Spring rechazaría el login con 401).
 - **Solo `POST /login` y `POST /registro` son públicos**, no todo `/api/auth/**`: así `/me` exige token.
 - **El correo se limpia antes de validar** (espacios al copiar y pegar) y se guarda en minúsculas.
-- **Llave del token:** `JWT_SECRET`, mínimo 32 caracteres. Solo el perfil `dev` trae una llave por defecto; en staging o producción, sin la variable la app no arranca (revisión de Jorel).
+- **Llave del token:** `JWT_SECRET`, mínimo 32 caracteres y obligatoria en todos los entornos. En local se define en `.env`; en despliegues, en el panel del hosting (revisión de Jorel).
 - **Reglas del registro** (revisión de Jorel): correo de estudiante `u` + 11 dígitos + `@usco.edu.co`, contraseña de 8 a 72 caracteres con letra y número, programa académico de la lista cerrada `ProgramaAcademico`.
 
 **Pruebas.** `AutenticacionTest` (contraseña y usuario inactivo), `JwtTest` (token válido, alterado, vencido, mal formado), `AuthServiceTest` y `AuthControllerTest` (login, registro y `/me` por HTTP).
@@ -95,7 +95,7 @@ public Algo mio(@AuthenticationPrincipal Jwt jwt) {
 
 **Historia de la integración.** La rama `scrum_12` traía su propio `JwtDecoder` y una llave en Base64 que chocaban con el login (la app no arrancaba al unirlas). Se integró en `feature/control-acceso` sobre el login: se conservaron `JwtRoleConverter` y `PingController`, y se descartó lo duplicado.
 
-**Pruebas.** `AccesoPorRolTest`: cada rol entra solo a su `/api/ping/{rol}` (200) y recibe 403 en los demás; sin token, 401; un rol desconocido no da permisos. `PingController` solo existe con los perfiles `dev` y `test` (en staging responde 404).
+**Pruebas.** `AccesoPorRolTest`: cada rol entra solo a su `/api/ping/{rol}` (200) y recibe 403 en los demás; sin token, 401; un rol desconocido no da permisos. `PingController` solo existe con el perfil `test` (en ejecución normal responde 404).
 
 ---
 
@@ -147,7 +147,7 @@ El reporte queda en `target/site/jacoco/index.html`.
 
 **Pruebas.** `FeedbackServiceTest` (las tres ramas de retroalimentación), `PracticaControllerTest` (pista, explicación, segundo fallo, segundo intento y trazabilidad de los cinco datos), `PracticaIdempotenciaConcurrenteTest` (8 envíos simultáneos con la misma clave → un solo intento) y `PracticaTransaccionTest` (rollback si falla el nivel).
 
-**Cómo probarlo a mano.** Con el perfil `dev`, iniciar sesión como estudiante, pedir `GET /api/practica/siguiente?asignatura=CALCULO_DIFERENCIAL`, enviar una opción incorrecta a `POST /api/practica/intentos` y revisar `retroalimentacion` (debe ser `PISTA`). Repetir el mismo cuerpo con otra `claveIdempotencia` y otra opción incorrecta: debe llegar `EXPLICACION` y `puedeReintentar: false`.
+**Cómo probarlo a mano.** Con la configuración local de `.env`, iniciar sesión como estudiante, pedir `GET /api/practica/siguiente?asignatura=CALCULO_DIFERENCIAL`, enviar una opción incorrecta a `POST /api/practica/intentos` y revisar `retroalimentacion` (debe ser `PISTA`). Repetir el mismo cuerpo con otra `claveIdempotencia` y otra opción incorrecta: debe llegar `EXPLICACION` y `puedeReintentar: false`.
 
 **Detalle técnico completo:** [`docs/code/retroalimentacion-e-idempotencia.md`](code/retroalimentacion-e-idempotencia.md).
 
@@ -290,7 +290,9 @@ Script: `pruebas/rendimiento/k6-practica-diagnostico.js`, ejecutado con k6 en Do
 | Método y ruta | Qué hace | Respuestas |
 |---|---|---|
 | `GET /api/admin/usuarios?buscar&rol&estado` | Lista con búsqueda en nombres, apellidos y correo, y filtros por rol y estado (todos opcionales) | 200 |
-| `POST /api/admin/usuarios` | Crea el usuario y devuelve `{ usuario, passwordTemporal }` | 201 · 400 campos · 409 correo repetido · 422 estudiante sin correo de estudiante o sin programa |
+| `POST /api/admin/usuarios` | Crea el usuario y envía el enlace para configurar la contraseña; no devuelve contraseñas ni tokens | 201 · 400 campos · 409 correo repetido · 422 estudiante sin correo de estudiante o sin programa · 503 correo SMTP no configurado |
+| `POST /api/admin/usuarios/{id}/reenviar-activacion` | Reenvía un enlace nuevo si la cuenta aún no definió su contraseña | 204 · 401 · 403 · 404 · 409 |
+| `POST /api/auth/activar-cuenta` | Consume el token de un solo uso y guarda la contraseña con BCrypt | 204 · 400 · 404 token inválido · 422 token vencido o usado |
 | `PUT /api/admin/usuarios/{id}` | Cambia nombres, apellidos, rol y programa (el correo no se cambia) | 200 · 404 · 422 si el administrador se quita su propio rol |
 | `PATCH /api/admin/usuarios/{id}/estado` | `{ "estado": "ACTIVO" \| "INACTIVO" }` | 200 · 404 · 422 si el administrador se desactiva a sí mismo |
 
@@ -300,22 +302,25 @@ Sin token responde 401 y con otro rol, 403.
 
 **Decisiones.**
 
-- **Contraseña temporal:** 12 caracteres al azar (`SecureRandom`), sin letras ni números que se confundan (0/O, 1/l/I). Cumple la regla del registro (letra y número). Solo viaja en la respuesta de creación; en la base queda el hash BCrypt.
+- **Configuración inicial:** cada alta genera una clave aleatoria no compartida, crea un token de 256 bits y envía un enlace válido por 7 días. La base guarda únicamente SHA-256 del token; al consumirlo, la clave elegida se guarda con BCrypt y el token queda marcado como usado. El enlace anterior se invalida al reenviarlo.
+- **Correo requerido para altas administrativas:** si SMTP no está configurado o falla el envío, la operación no crea la cuenta y devuelve un error; a diferencia de las invitaciones de grupo, el token de activación nunca se escribe en logs.
 - **Mismas reglas que el registro para estudiantes:** correo `u` + 11 dígitos + `@usco.edu.co` y programa de la lista. Docentes y administradores no llevan programa.
 - **El administrador no puede desactivarse ni quitarse el rol ADMIN:** se quedaría sin acceso a esta pantalla.
 - **No se borran usuarios:** se desactivan, y así se conservan sus intentos y resultados.
 - **Un usuario desactivado no inicia sesión** (ya lo garantizaba `UsuarioDetailsService`). Un token emitido antes de desactivarlo sigue valiendo hasta que vence (README §11).
 
-**Pruebas.** `AdminUsuarioControllerTest`: 7 pruebas.
-- Permisos: 401 sin token y 403 para docente y estudiante en los 4 endpoints.
+**Pruebas.** `AdminUsuarioControllerTest` y `CorreoInvitacionServiceTest` cubren:
+- Permisos: rutas administrativas protegidas (401 sin token y 403 para docente y estudiante).
 - Búsqueda y filtros.
-- Creación con contraseña temporal que sirve para iniciar sesión.
+- Creación sin devolver contraseña, token de un solo uso, hash persistido y login tras activar.
+- Reenvío que invalida el enlace anterior; no se reenvía después de configurar la cuenta.
+- SMTP no configurado impide enviar el enlace y no registra el token en logs.
 - Correo repetido (409) y estudiante inválido (422).
 - Edición del rol.
 - Usuario desactivado que no puede iniciar sesión y vuelve a poder al reactivarlo.
 - El administrador no puede desactivarse ni quitarse el rol.
 
-**Cómo probarlo a mano.** Swagger → login con `admin@aprendizaje.test` / `Admin2026*` → **Authorize** → `POST /api/admin/usuarios` con un docente nuevo; luego iniciar sesión con la contraseña temporal que devuelve.
+**Cómo probarlo a mano.** Configura SMTP y `FRONTEND_URL`; luego Swagger → login con `admin@aprendizaje.test` / `Admin2026*` → **Authorize** → `POST /api/admin/usuarios`. Abre el correo, define la contraseña en `/activar-cuenta?token=…` e inicia sesión. Si el enlace vence, usa **Reenviar enlace** en la lista de usuarios.
 
 ## 11. Panel del administrador (SCRUM-46)
 
@@ -360,7 +365,7 @@ Sin token responde 401 y con otro rol, 403.
 **Para qué.** Comprobar que los módulos comparten usuarios, roles y datos, y que los tres flujos completos funcionan sin intervención manual en la base.
 
 **Prueba automatizada.** `FlujosCompletosE2ETest` usa Testcontainers, MockMvc y login real:
-- Administrador: crea docente y estudiante con contraseña temporal, los desactiva y reactiva, y consulta panel y catálogo.
+- Administrador: crea docente y estudiante, define sus contraseñas desde enlaces enviados por correo, los desactiva y reactiva, y consulta panel y catálogo.
 - Docente: crea un grupo, inscribe al estudiante y consulta su analítica e historial.
 - Estudiante: presenta los 24 ítems del diagnóstico, resuelve tres ejercicios de práctica y consulta progreso e historial.
 

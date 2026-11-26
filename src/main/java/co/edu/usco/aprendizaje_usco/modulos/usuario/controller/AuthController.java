@@ -2,11 +2,13 @@ package co.edu.usco.aprendizaje_usco.modulos.usuario.controller;
 
 import co.edu.usco.aprendizaje_usco.common.error.ErrorResponse;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.AuthResponse;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.ActivarCuentaRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.LoginRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.RegistroRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.UsuarioResponse;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.InvitacionPublicaResponse;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.service.AuthService;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.service.ActivacionCuentaService;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.service.InvitacionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,15 +31,18 @@ import org.springframework.web.bind.annotation.RestController;
 /** Endpoints de autenticación (contrato de SCRUM-81). */
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "Autenticación", description = "Inicio de sesión, registro de estudiantes y usuario actual")
+@Tag(name = "Autenticación", description = "Inicio de sesión, registro, configuración de contraseña y usuario actual")
 public class AuthController {
 
     private final AuthService authService;
     private final InvitacionService invitacionService;
+    private final ActivacionCuentaService activacionCuentaService;
 
-    public AuthController(AuthService authService, InvitacionService invitacionService) {
+    public AuthController(AuthService authService, InvitacionService invitacionService,
+                          ActivacionCuentaService activacionCuentaService) {
         this.authService = authService;
         this.invitacionService = invitacionService;
+        this.activacionCuentaService = activacionCuentaService;
     }
 
     @PostMapping("/login")
@@ -78,6 +83,22 @@ public class AuthController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public InvitacionPublicaResponse invitacion(@RequestParam String token) {
         return invitacionService.obtenerPublica(token);
+    }
+
+    @PostMapping("/activar-cuenta")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @SecurityRequirements
+    @Operation(summary = "Definir la contraseña de una cuenta",
+            description = "Consume un enlace de un solo uso enviado por correo; vence a los 7 días por defecto.")
+    @ApiResponse(responseCode = "204", description = "Contraseña configurada")
+    @ApiResponse(responseCode = "400", description = "Campos inválidos",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Enlace inexistente",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "422", description = "Enlace vencido o ya utilizado",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public void activarCuenta(@Valid @RequestBody ActivarCuentaRequest request) {
+        activacionCuentaService.activar(request.token(), request.password());
     }
 
     @GetMapping("/me")

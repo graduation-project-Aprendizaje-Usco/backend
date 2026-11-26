@@ -448,7 +448,7 @@ Errores:
 
 ### 7.3 Peticiones manuales
 
-Con el backend en perfil `dev`:
+Con el backend usando la configuración local de `.env`:
 
 ```http
 @base = http://localhost:8080

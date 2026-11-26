@@ -12,13 +12,16 @@ Migraciones (`src/main/resources/db/migration/`):
 | `V6__datos_ejercicios_semilla.sql` | 90 ejercicios semilla: 45 de Cálculo Diferencial y 45 de Cálculo Integral |
 | `V7__crear_grupos_docentes_estudiantes.sql` | Tablas `grupo` y `grupo_estudiante` (antes `V202610242250__…`; se renombró para la numeración consecutiva) |
 | `V8__crear_invitaciones.sql` | Tabla `invitacion` para el registro de estudiantes por invitación |
-| `db/dev-data/R__usuarios_de_prueba.sql` | Usuarios de prueba; solo con el perfil `dev` |
+| `V9__crear_activacion_cuenta.sql` | Token de un solo uso para definir la contraseña de cuentas creadas por administración |
+| `db/dev-data/R__usuarios_de_prueba.sql` | Usuarios de prueba; solo se carga si `SPRING_FLYWAY_LOCATIONS` la incluye |
 
 Motor: PostgreSQL 17. Convención: tablas y columnas en `snake_case` singular; restricciones `pk_`, `fk_`, `uq_`, `ck_`; índices `ix_`.
 
+La tabla `activacion_cuenta` relaciona una cuenta con su token vigente, guarda únicamente el hash SHA-256 y registra vencimiento y consumo. Al reenviar, se rota el hash y el enlace anterior deja de ser válido.
+
 ## Diagrama completo (as-built)
 
-Las 18 tablas y sus 31 relaciones.
+Las 19 tablas y sus 32 relaciones.
 
 **De dónde sale.** Se generó el 1 de noviembre de 2026 a partir de la base real, con todas las migraciones aplicadas, consultando `information_schema` y `pg_constraint`. Si una migración nueva cambia el esquema, actualiza este diagrama en el mismo PR.
 
@@ -60,6 +63,7 @@ erDiagram
     usuario ||--o{ grupo_estudiante : "estudiante_id"
     grupo ||--o{ grupo_estudiante : "grupo_id"
     grupo ||--o{ invitacion : "grupo_id"
+    usuario ||--o| activacion_cuenta : "usuario_id"
     competencia {
         bigint id PK
         varchar codigo UK
@@ -230,6 +234,15 @@ erDiagram
         timestamptz creado_en
         timestamptz actualizado_en
     }
+    activacion_cuenta {
+        bigint id PK
+        bigint usuario_id FK, UK
+        varchar token_hash UK
+        timestamptz vence_en
+        timestamptz usada_en "opcional"
+        timestamptz creado_en
+        timestamptz actualizado_en
+    }
 ```
 
 **Reglas que el diagrama no muestra:**
@@ -349,7 +362,7 @@ La invitación es la fuente de verdad antes de que exista la cuenta: guarda el c
 | `estado` como texto con CHECK (no BOOLEAN) | Permite agregar estados (por ejemplo, BLOQUEADO) sin migrar datos. |
 | `rol.nombre` como enum en Java, `competencia.codigo` como texto | Los roles son fijos por diseño. Las competencias deben poder crecer con una migración de datos, sin tocar código (RNF-09). |
 | `TIMESTAMPTZ` | Guarda el instante exacto sin ambigüedad de zona horaria (Colombia UTC-5 vs. servidor en UTC). |
-| Usuarios de prueba en `db/dev-data` (migración repetible) | Solo existen con el perfil `dev`; nunca en pruebas ni en producción. |
+| Usuarios de prueba en `db/dev-data` (migración repetible) | Solo se cargan localmente con `SPRING_FLYWAY_LOCATIONS`; nunca en pruebas ni en producción. |
 
 ## Prueba diagnóstica
 

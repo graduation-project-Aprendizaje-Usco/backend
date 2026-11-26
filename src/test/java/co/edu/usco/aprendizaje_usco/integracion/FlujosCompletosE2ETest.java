@@ -20,6 +20,11 @@ import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.UsuarioRepository
 import com.jayway.jsonpath.JsonPath;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.mockito.ArgumentCaptor;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,16 +33,19 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 
 /**
  * Recorrido end-to-end de los tres roles a través de la API real (SCRUM-140).
  * Cada prueba usa los endpoints y el login reales; solo el administrador inicial
  * se crea como fixture, porque no existe un registro público de administradores.
  */
-@SpringBootTest
+@SpringBootTest(properties = {"MAIL_HOST=smtp.test", "MAIL_USERNAME=test-user", "MAIL_PASSWORD=test-password"})
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
@@ -62,18 +70,22 @@ class FlujosCompletosE2ETest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @MockitoBean
+    private JavaMailSender mailSender;
+
     @Test
     void administradorGestionaUsuariosYRoles() throws Exception {
         Usuario admin = crearUsuario("Ada", "Admin E2E", "admin.e2e@usco.edu.co", NombreRol.ADMIN, null);
         String tokenAdmin = login("admin.e2e@usco.edu.co", PASSWORD);
 
-        String docenteJson = mockMvc.perform(json(post("/api/admin/usuarios"),
+        mockMvc.perform(json(post("/api/admin/usuarios"),
                         nuevoUsuario("Docente", "E2E", "docente.e2e@usco.edu.co", "DOCENTE", null))
                         .header("Authorization", tokenAdmin))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.usuario.rol").value("DOCENTE"))
-                .andReturn().getResponse().getContentAsString();
-        String passwordDocente = JsonPath.read(docenteJson, "$.passwordTemporal");
+                .andExpect(jsonPath("$.passwordTemporal").doesNotExist());
+        activarCuenta("docente.e2e@usco.edu.co", "ClaveInicial2026");
+        String passwordDocente = "ClaveInicial2026";
 
         mockMvc.perform(json(post("/api/auth/login"),
                         "{\"correo\":\"docente.e2e@usco.edu.co\",\"password\":\"" + passwordDocente + "\"}"))
@@ -88,7 +100,8 @@ class FlujosCompletosE2ETest {
                 .andExpect(jsonPath("$.usuario.rol").value("ESTUDIANTE"))
                 .andReturn().getResponse().getContentAsString();
         Number estudianteId = JsonPath.read(estudianteJson, "$.usuario.id");
-        String passwordEstudiante = JsonPath.read(estudianteJson, "$.passwordTemporal");
+        activarCuenta("u20269999991@usco.edu.co", "ClaveInicial2026");
+        String passwordEstudiante = "ClaveInicial2026";
 
         mockMvc.perform(json(patch("/api/admin/usuarios/{id}/estado", estudianteId.longValue()),
                         "{\"estado\":\"INACTIVO\"}").header("Authorization", tokenAdmin))
@@ -106,7 +119,7 @@ class FlujosCompletosE2ETest {
 
         mockMvc.perform(json(patch("/api/admin/usuarios/{id}/estado", admin.getId()),
                         "{\"estado\":\"INACTIVO\"}").header("Authorization", tokenAdmin))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().is(422));
 
         mockMvc.perform(get("/api/admin/usuarios")
                         .param("rol", "DOCENTE")
@@ -129,12 +142,13 @@ class FlujosCompletosE2ETest {
         crearUsuario("Ada", "Admin E2E", "admin.flujo@usco.edu.co", NombreRol.ADMIN, null);
         String tokenAdmin = login("admin.flujo@usco.edu.co", PASSWORD);
 
-        String docenteJson = mockMvc.perform(json(post("/api/admin/usuarios"),
+        mockMvc.perform(json(post("/api/admin/usuarios"),
                         nuevoUsuario("Diego", "Docente E2E", "docente.flujo@usco.edu.co", "DOCENTE", null))
                         .header("Authorization", tokenAdmin))
                 .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-        String passwordDocente = JsonPath.read(docenteJson, "$.passwordTemporal");
+                .andExpect(jsonPath("$.passwordTemporal").doesNotExist());
+        activarCuenta("docente.flujo@usco.edu.co", "ClaveInicial2026");
+        String passwordDocente = "ClaveInicial2026";
         String tokenDocente = login("docente.flujo@usco.edu.co", passwordDocente);
 
         String estudianteJson = mockMvc.perform(json(post("/api/admin/usuarios"),
@@ -144,7 +158,8 @@ class FlujosCompletosE2ETest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         Number estudianteId = JsonPath.read(estudianteJson, "$.usuario.id");
-        String passwordEstudiante = JsonPath.read(estudianteJson, "$.passwordTemporal");
+        activarCuenta("u20269999992@usco.edu.co", "ClaveInicial2026");
+        String passwordEstudiante = "ClaveInicial2026";
         String tokenEstudiante = login("u20269999992@usco.edu.co", passwordEstudiante);
 
         String grupoJson = mockMvc.perform(json(post("/api/grupos"),
@@ -267,6 +282,24 @@ class FlujosCompletosE2ETest {
                 .andReturn();
         String token = JsonPath.read(resultado.getResponse().getContentAsString(), "$.token");
         return "Bearer " + token;
+    }
+
+    private void activarCuenta(String correo, String password) throws Exception {
+        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender, atLeastOnce()).send(captor.capture());
+        String token = captor.getAllValues().stream()
+                .filter(mensaje -> mensaje.getTo() != null && List.of(mensaje.getTo()).contains(correo))
+                .map(SimpleMailMessage::getText)
+                .map(texto -> {
+                    Matcher matcher = Pattern.compile("token=([A-Za-z0-9_-]+)").matcher(texto);
+                    return matcher.find() ? matcher.group(1) : null;
+                })
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No llegó enlace de activación a " + correo));
+        mockMvc.perform(json(post("/api/auth/activar-cuenta"),
+                        "{\"token\":\"" + token + "\",\"password\":\"" + password + "\"}"))
+                .andExpect(status().isNoContent());
     }
 
     private static String nuevoUsuario(String nombres, String apellidos, String correo, String rol,

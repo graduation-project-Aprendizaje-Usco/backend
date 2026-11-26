@@ -58,15 +58,32 @@ public class AdminUsuarioController {
 
     @PostMapping
     @Operation(summary = "Crear un usuario",
-            description = "Devuelve una contraseña temporal que solo se muestra en esta respuesta.")
+            description = "Envía un enlace de un solo uso para que la persona configure su contraseña.")
     @ApiResponse(responseCode = "201", description = "Usuario creado")
     @ApiResponse(responseCode = "409", description = "El correo ya está registrado",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "422", description = "Estudiante sin correo de estudiante o sin programa",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "503", description = "El correo SMTP no está configurado",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public ResponseEntity<UsuarioCreadoResponse> crear(@Valid @RequestBody UsuarioAdminRequest request) {
         UsuarioCreadoResponse creado = adminUsuarioService.crear(request);
         return ResponseEntity.created(URI.create("/api/admin/usuarios/" + creado.usuario().id())).body(creado);
+    }
+
+    @PostMapping("/{id}/reenviar-activacion")
+    @Operation(summary = "Reenviar el enlace para configurar la contraseña",
+            description = "Solo está disponible mientras la persona no haya definido su contraseña.")
+    @ApiResponse(responseCode = "204", description = "Correo enviado")
+    @ApiResponse(responseCode = "404", description = "El usuario no existe",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "La cuenta ya configuró su contraseña",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "503", description = "El correo SMTP no está configurado",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<Void> reenviarActivacion(@PathVariable Long id) {
+        adminUsuarioService.reenviarActivacion(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}")

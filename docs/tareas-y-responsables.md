@@ -102,7 +102,7 @@ El conteo de Jorel incluye la tarea nueva #150 (registro por invitación), que a
 
 **Responsable:** Jorel Vargas · **Tipo:** Tarea · **Épica:** EPIC-1 · **Área:** Backend
 
-**Descripción.** Proyecto Spring Boot 4.1 / Java 21 generado con Initializr, organizado por módulo funcional con capas internas (controller, service, repository, dto, entity), perfiles dev/test y conexión a PostgreSQL con Docker Compose.
+**Descripción.** Proyecto Spring Boot 4.1 / Java 21 generado con Initializr, organizado por módulo funcional con capas internas (controller, service, repository, dto, entity), una configuración de ejecución externalizada por entorno y perfil `test` para pruebas.
 
 **Criterios de aceptación**
 
@@ -114,8 +114,8 @@ El conteo de Jorel incluye la tarea nueva #150 (registro por invitación), que a
 
 - **#4 Generar el proyecto con Initializr y sus dependencias.** Spring Web, Data JPA, PostgreSQL, Flyway, Security, OAuth2 Resource Server, Validation, Lombok, DevTools, Actuator, Docker Compose, Testcontainers + springdoc 3.x.
   - Criterio: Compila y la prueba generada pasa.
-- **#5 Configurar perfiles, compose.yaml y application.yml.** application.yml común, application-dev.yml, application-test.yml, PostgreSQL 17 en compose.yaml, ddl-auto: validate.
-  - Criterio: La app conecta a PostgreSQL local en perfil dev.
+- **#5 Configurar propiedades, compose.yaml y application.yml.** application.yml con configuración común y valores externalizados, application-test.yml, PostgreSQL 17 en compose.yaml, ddl-auto: validate.
+  - Criterio: La app conecta a PostgreSQL local con la configuración de `.env`.
 - **#6 Crear estructura de paquetes y SecurityConfig mínima.** Paquetes config, security, common, usuario, diagnostico, practica, contenido, progreso, analitica. SecurityConfig con rutas públicas (/api/auth/\*\*, health, Swagger).
   - Criterio: Health y Swagger accesibles sin token; el resto devuelve 401.
 - **#7 Manejador global de errores y formato estándar.** En common/: clase ErrorResponse (timestamp, status, message, path), @RestControllerAdvice que traduce MethodArgumentNotValidException (400, con los campos inválidos), EntityNotFound/ResourceNotFound propia (404), DataIntegrityViolation (409) y Exception genérica (500 sin exponer la traza). Excepciones propias: RecursoNoEncontradoException, ConflictoException, ReglaNegocioException.
@@ -182,9 +182,9 @@ El conteo de Jorel incluye la tarea nueva #150 (registro por invitación), que a
   - Criterio: Insertar dos usuarios con el mismo correo falla.
 - **#17 Entidades JPA y repositorios de rol, usuario y competencia.** Rol, Usuario (@ManyToOne a Rol), Competencia en sus módulos; RolRepository, UsuarioRepository (findByCorreo, existsByCorreo), CompetenciaRepository (findByCodigo). Enum EstadoUsuario.
   - Criterio: La app arranca con ddl-auto: validate (el mapeo coincide con la migración).
-- **#18 Datos semilla: roles, competencias y usuarios de prueba.** Migración de datos con los 3 roles y 3 competencias (se requieren en todos los entornos). Usuarios de prueba (estudiante, docente, admin) con contraseña en BCrypt en una ubicación solo para dev/staging (ej. db/dev-data, agregada a spring.flyway.locations en application-dev.yml). Completar la tabla de usuarios de prueba del README.
-  - Criterio: Con perfil dev se puede iniciar sesión con los 3 usuarios de prueba.
-  - Criterio: Con perfil test/producción no existen usuarios de prueba.
+- **#18 Datos semilla: roles, competencias y usuarios de prueba.** Migración de datos con los 3 roles y 3 competencias (se requieren en todos los entornos). Usuarios de prueba (estudiante, docente, admin) con contraseña en BCrypt en `db/dev-data`, que solo se agrega a `spring.flyway.locations` en `.env` local. Completar la tabla de usuarios de prueba del README.
+  - Criterio: Con la configuración local se puede iniciar sesión con los 3 usuarios de prueba.
+  - Criterio: En pruebas y producción no se cargan usuarios de prueba.
 - **#19 Prueba de integración del esquema.** Prueba con Testcontainers que arranca PostgreSQL, aplica las migraciones y verifica guardar/leer un usuario con su rol.
   - Criterio: ./mvnw test pasa localmente y en CI.
 
@@ -268,7 +268,7 @@ El conteo de Jorel incluye la tarea nueva #150 (registro por invitación), que a
 
 - **#34 Elegir la plataforma de hosting.** Comparar 2 o 3 opciones gratuitas o con crédito estudiantil para Spring Boot + PostgreSQL y para un sitio estático (límites, suspensión por inactividad, región). Registrar la decisión en la tarjeta.
   - Criterio: Decisión escrita con el motivo.
-- **#35 Desplegar backend y PostgreSQL.** Servicio del backend (Dockerfile o build nativo de la plataforma), base PostgreSQL gestionada, variables SPRING_PROFILES_ACTIVE, SPRING_DATASOURCE_\*, JWT_SECRET, CORS_ORIGINS.
+- **#35 Desplegar backend y PostgreSQL.** Servicio del backend (Dockerfile o build nativo de la plataforma), base PostgreSQL gestionada y variables SPRING_DATASOURCE_*, JWT_SECRET, CORS_ORIGINS.
   - Criterio: /actuator/health de staging responde UP.
 - **#36 Desplegar frontend.** Build de Vite con VITE_API_URL de staging; regla de reescritura para que las rutas de React Router no den 404 al recargar.
   - Criterio: Recargar /estudiante en staging no da 404.

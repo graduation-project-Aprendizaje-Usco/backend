@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
  * Endpoint de PRUEBA del control de acceso por rol (SCRUM-12, SCRUM-91):
  * GET /api/ping/{rol} responde 200 solo al rol indicado y 403 a los demás.
  *
- * Existe únicamente con los perfiles dev y test: en staging y producción no se
- * registra y la ruta responde 404. Las pruebas de AccesoPorRolTest lo usan.
+ * Existe únicamente en las pruebas automáticas: en ejecución normal la ruta
+ * no se registra y responde 404. Las pruebas de AccesoPorRolTest lo usan.
  */
-@Profile({"dev", "test"})
+@Profile("test")
 @RestController
 @RequestMapping("/api/ping")
 public class PingController {

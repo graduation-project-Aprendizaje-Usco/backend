@@ -1,5 +1,6 @@
 package co.edu.usco.aprendizaje_usco.modulos.usuario.service;
 
+import co.edu.usco.aprendizaje_usco.common.exception.ServicioNoDisponibleException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -9,8 +10,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 /**
- * Envío del enlace de invitación (#151). Si MAIL_HOST está configurado usa SMTP
- * (por ejemplo Gmail); si no, deja el enlace en el log para desarrollo y pruebas.
+ * Envía invitaciones de grupo (con enlace en log si falta SMTP) y enlaces de
+ * configuración de cuenta (SMTP obligatorio; nunca deja el token en logs).
  */
 @Service
 public class CorreoInvitacionService {
@@ -60,6 +61,33 @@ public class CorreoInvitacionService {
 
                 Si no esperabas esta invitación, ignora este mensaje.
                 """.formatted(enlace));
+        sender.send(mensaje);
+    }
+
+    public void enviarConfiguracionCuenta(String correo, String nombres, String enlace, long vigenciaHoras) {
+        JavaMailSender sender = mailSender.getIfAvailable();
+        boolean smtpListo = mailHost != null && !mailHost.isBlank()
+                && mailUsername != null && !mailUsername.isBlank()
+                && mailPassword != null && !mailPassword.isBlank()
+                && sender != null;
+        if (!smtpListo) {
+            throw new ServicioNoDisponibleException(
+                    "El correo no está configurado. No se creó la cuenta; configura SMTP e inténtalo de nuevo.");
+        }
+        SimpleMailMessage mensaje = new SimpleMailMessage();
+        mensaje.setFrom(remitente);
+        mensaje.setTo(correo);
+        mensaje.setSubject("Configura tu contraseña de Aprendizaje USCO");
+        mensaje.setText("""
+                Hola %s,
+
+                El administrador creó tu cuenta en Aprendizaje USCO.
+                Usa este enlace para definir tu contraseña (válido por %d horas y de un solo uso):
+
+                %s
+
+                Si no esperabas este mensaje, puedes ignorarlo.
+                """.formatted(nombres, vigenciaHoras, enlace));
         sender.send(mensaje);
     }
 }

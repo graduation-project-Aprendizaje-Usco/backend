@@ -12,6 +12,7 @@ API REST de **Aprendizaje USCO**, plataforma web de diagnóstico, práctica adap
 | Convenciones | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Qué se ha implementado | [implementacion.md](implementacion.md) (historia por historia: qué hace, decisiones, cómo probarlo) |
 | Manual técnico | [manual-tecnico.md](manual-tecnico.md) (arquitectura, despliegue, instalación completa, endpoints, seguridad) |
+| Despliegue en Render + Neon | [despliegue-render.md](despliegue-render.md) (variables y pasos) |
 | Modelo de datos | [base-de-datos/modelo-fisico.md](base-de-datos/modelo-fisico.md) (diagrama completo, tablas y restricciones) |
 
 ---
@@ -45,7 +46,7 @@ docker compose up -d postgres pgadmin
 ./mvnw spring-boot:run          # Windows: .\mvnw.cmd spring-boot:run
 ```
 
-Con el perfil `dev`, Spring Boot conecta al PostgreSQL de `compose.yaml` (puerto local 5433), valida/aplica las migraciones pendientes de Flyway y carga los usuarios de prueba. En la opción 1 el backend queda en `http://localhost:8080`; en la opción 2 lo levanta Maven y no debe ejecutarse al mismo tiempo que el contenedor del backend porque ambos usan el puerto 8080.
+La aplicación usa una sola configuración de ejecución y toma sus valores de `.env` o del entorno. En local conecta al PostgreSQL de `compose.yaml` (puerto 5433), aplica las migraciones de Flyway y carga los usuarios de prueba indicados por `SPRING_FLYWAY_LOCATIONS`. En la opción 1 el backend queda en `http://localhost:8080`; en la opción 2 lo levanta Maven y no debe ejecutarse al mismo tiempo que el contenedor del backend porque ambos usan el puerto 8080.
 
 PostgreSQL guarda sus datos en `postgres_data/`. Para detener los servicios sin borrar los datos usa `docker compose stop`.
 
@@ -55,13 +56,13 @@ PostgreSQL guarda sus datos en `postgres_data/`. Para detener los servicios sin 
 | Documentación de la API | http://localhost:8080/swagger-ui.html | Swagger UI |
 | pgAdmin (ver la base desde el navegador) | http://localhost:5050 | Ingreso con `PGADMIN_DEFAULT_EMAIL` y `PGADMIN_DEFAULT_PASSWORD` de tu `.env` |
 
-**Sin Docker:** instala PostgreSQL 17, crea la base `aprendizaje_usco` con usuario `usco` / `usco_dev` (puerto 5432, como en `.env.template`) y agrega la línea `spring.docker.compose.enabled=false` a tu `.env`. El `.env` nunca se sube al repositorio.
+**Sin Docker:** instala PostgreSQL 17, crea la base `aprendizaje_usco` con el usuario y la contraseña que definas en tu `.env` (puerto 5432), cambia `SPRING_DATASOURCE_URL` a `jdbc:postgresql://localhost:5432/aprendizaje_usco` y define `SPRING_DOCKER_COMPOSE_ENABLED=false`. El `.env` nunca se sube al repositorio.
 
 ## 3. Comandos útiles
 
 | Comando | Qué hace |
 |---|---|
-| `./mvnw spring-boot:run` | Corre la API en el puerto 8080 (perfil `dev`) |
+| `./mvnw spring-boot:run` | Corre la API en el puerto 8080 con la configuración de `.env` |
 | `./mvnw test` | Pruebas unitarias y de integración (Testcontainers, requiere Docker). Es lo mismo que corre CI en cada PR |
 | `./mvnw -B -ntp verify` | Compila, ejecuta las pruebas y verifica/empaqueta el backend |
 | `./mvnw clean package` | Genera el `.jar` en `target/` |
@@ -73,25 +74,49 @@ Verificación registrada el **4 de noviembre de 2026**: `./mvnw -B -ntp verify` 
 
 | Archivo | Uso |
 |---|---|
-| `src/main/resources/application.properties` | Configuración común a todos los entornos. **Sin secretos ni llaves por defecto** |
-| `src/main/resources/application-dev.properties` | Solo desarrollo local: usuarios de prueba, SQL en consola y una llave JWT de desarrollo |
-| `src/test/resources/config/application.properties` | Solo pruebas automáticas: llave JWT de pruebas (se suma al `application.properties` principal) |
+| `src/main/resources/application.properties` | Única configuración de ejecución para local y despliegues; las diferencias se definen con variables |
+| `src/test/resources/config/application.properties` | Configuración aislada de pruebas automáticas; puede activar el perfil `test` |
 | `.env` (no se sube; copia de `.env.template`) | Tus valores locales de base de datos y pgAdmin |
 
-Variables de entorno (en staging se definen en el servicio de hosting, **nunca en el repositorio**):
+Variables de entorno (en el hosting se definen en su panel, **nunca en el repositorio**):
 
-| Variable | Descripción | Valor en desarrollo |
-|---|---|---|
-| `JWT_SECRET` | Llave para firmar los tokens (mínimo 32 caracteres). **Obligatoria fuera del perfil `dev`**: sin ella la app no arranca | la pone `application-dev.properties` |
-| `JWT_EXPIRATION_MINUTES` | Duración del token en minutos | `120` |
-| `CORS_ORIGINS` | Orígenes permitidos para el frontend | `http://localhost:5173` |
-| `SPRING_PROFILES_ACTIVE` | Perfil activo | `dev` |
-| `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Conexión a la base en staging | — |
-| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP para enviar invitaciones (Gmail: `smtp.gmail.com`, `587`, contraseña de aplicación) | sin configurar: el enlace se registra en el log |
-| `MAIL_SMTP_AUTH` / `MAIL_STARTTLS` | Autenticación y STARTTLS del SMTP | `true` |
-| `MAIL_HEALTH_ENABLED` | Incluir el correo en `/actuator/health` | `false` hasta configurar credenciales |
-| `MAIL_FROM` | Remitente de las invitaciones | si se omite, usa `MAIL_USERNAME` |
-| `FRONTEND_URL` | URL del frontend para armar `/registro?token=…` | `http://localhost:5173` |
+| Variable | Descripción | Local / desarrollo | Render |
+|---|---|---|---|
+| `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Conexión JDBC a PostgreSQL | `.env` / Docker Compose | URL de Neon con `?sslmode=require`; credenciales obligatorias |
+| `SPRING_FLYWAY_LOCATIONS` | Migraciones Flyway adicionales | En `.env` incluye `classpath:db/dev-data` para usuarios demo | `classpath:db/migration` (sin usuarios demo) |
+| `SPRING_DOCKER_COMPOSE_ENABLED` | Permite a Spring Boot iniciar Compose al ejecutar localmente con Maven | `true` | `false` |
+| `JWT_SECRET` | Llave para firmar los tokens (mínimo 32 caracteres), obligatoria en todos los entornos | Se define en `.env` | Obligatoria y aleatoria |
+| `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` | Credenciales del administrador inicial; configúralas juntas para crear la cuenta si no existe | Opcionales en `.env` | Opcionales en el panel de Render |
+| `BOOTSTRAP_ADMIN_NAMES` / `BOOTSTRAP_ADMIN_SURNAMES` | Nombre y apellido de la cuenta inicial | `Administrador` / `Sistema` por defecto | Opcionales |
+| `JWT_EXPIRATION_MINUTES` | Duración del token en minutos | `120` | Opcional (`120`) |
+| `CORS_ORIGINS` | Orígenes permitidos para el frontend (separados por coma) | `http://localhost:5173` | Origen(es) público(s); si se omite, usa `FRONTEND_URL` |
+| `FRONTEND_URL` | Origen del frontend para CORS y para armar `/registro?token=…` | `http://localhost:5173` | Dominio del frontend, sin barra final |
+| `PORT` | Puerto HTTP del servidor | `8080` | La asigna Render; no definir a mano |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP para enviar invitaciones (Gmail: `smtp.gmail.com`, `587`, contraseña de aplicación) | sin configurar: el enlace se registra en el log | Opcional; sin configurar el enlace queda en el log |
+| `MAIL_SMTP_AUTH` / `MAIL_STARTTLS` | Autenticación y STARTTLS del SMTP | `true` | Opcional (`true`) |
+| `MAIL_HEALTH_ENABLED` | Incluir el correo en `/actuator/health` | `false` hasta configurar credenciales | Opcional (`false`) |
+| `MAIL_FROM` | Remitente de las invitaciones | si se omite, usa `MAIL_USERNAME` | Opcional |
+
+### Administrador inicial
+
+Al configurar `BOOTSTRAP_ADMIN_EMAIL` y `BOOTSTRAP_ADMIN_PASSWORD`, al iniciar la
+aplicación se crea esa cuenta con el rol `ADMIN` si aún no existe. Flyway aplica
+primero las migraciones, que crean el rol; el runner guarda la contraseña con el
+mismo BCrypt usado por el login. En cada reinicio verifica el correo y deja intacta
+una cuenta `ADMIN` ya existente. Si el correo ya pertenece a otro rol, el arranque
+falla en lugar de elevar sus privilegios. Si ambas variables están vacías, no se
+crea ninguna cuenta; si solo se configura una, el arranque falla con un error claro.
+
+La contraseña debe tener al menos 12 caracteres, incluir una letra y un número,
+y ocupar como máximo 72 bytes UTF-8. Mantén estas credenciales solo en `.env` o
+en el panel de Render. Si se conservan allí, el administrador se podrá recrear
+después de reinicializar la base de datos.
+
+**Despliegue en Render:** usa las mismas propiedades con valores del panel de Render,
+conecta a Neon con SSL
+(`sslmode=require`), escucha en el `PORT` de Render y mantiene el esquema con
+Flyway (`clean-disabled=true`, Hibernate `ddl-auto=validate`). Guía completa y
+variables: [despliegue-render.md](despliegue-render.md).
 
 Propiedades de la prueba diagnóstica (en `application.properties`, no son secretos):
 
@@ -138,7 +163,7 @@ Dentro de cada módulo:
   validacion/   anotaciones de validación propias (si el módulo las necesita)
 
 src/main/resources/db/migration/   migraciones Flyway (todos los entornos)
-src/main/resources/db/dev-data/    datos de prueba (solo perfil dev)
+src/main/resources/db/dev-data/    datos de prueba (solo si SPRING_FLYWAY_LOCATIONS los incluye)
 ```
 
 ## 6. Convenciones de la API
@@ -147,7 +172,7 @@ src/main/resources/db/dev-data/    datos de prueba (solo perfil dev)
 - Rutas públicas: solo `POST /api/auth/login`, `POST /api/auth/registro`, `/actuator/health` y Swagger. Todo lo demás (incluido `GET /api/auth/me`) exige `Authorization: Bearer <token>`.
 - Restricción por rol con `@PreAuthorize("hasRole('DOCENTE')")` en el controlador (método o clase). Roles: `ESTUDIANTE`, `DOCENTE`, `ADMIN`.
 - **Todo endpoint nuevo lleva `@PreAuthorize`.** La regla general de seguridad es solo "con sesión", así que sin la anotación cualquier rol entraría. `ProteccionDeEndpointsTest` falla si falta; los públicos a propósito se agregan a su lista de excepciones.
-- `GET /api/ping/{rol}` es un endpoint de prueba del acceso por rol: solo existe con los perfiles `dev` y `test`.
+- `GET /api/ping/{rol}` es un endpoint de prueba del acceso por rol: solo existe con el perfil `test`.
 - Los controladores reciben y devuelven **DTO**, nunca entidades.
 - Errores con un único formato, generado por el manejador global en `common/`:
 
@@ -185,9 +210,9 @@ src/main/resources/db/dev-data/    datos de prueba (solo perfil dev)
   SQL
   ```
 - Datos que necesitan todos los entornos (roles, competencias, los 24 ítems del diagnóstico) van en migraciones versionadas de `db/migration`.
-- Datos de prueba que no deben llegar a producción (usuarios demo) van en `db/dev-data` como migración repetible `R__…sql`, que solo se carga con el perfil `dev`.
+- Datos de prueba que no deben llegar a producción (usuarios demo) van en `db/dev-data` como migración repetible `R__…sql`. En local se carga porque `.env` incluye esa ubicación; en despliegues usa solo `classpath:db/migration`.
 
-Usuarios de prueba (solo perfil `dev`):
+Usuarios de prueba (solo en bases locales que incluyan `db/dev-data`):
 
 | Rol | Correo | Contraseña |
 |---|---|---|
@@ -215,8 +240,8 @@ Quién responde por cada parte del backend. El detalle tarea por tarea está en 
 
 | Síntoma | Causa probable / solución |
 |---|---|
-| `Connection refused` al arrancar | Docker Desktop cerrado. Sin Docker: PostgreSQL local apagado o `spring.docker.compose.enabled=false` faltante en `.env` |
-| `Falta la variable de entorno JWT_SECRET` al arrancar | Arrancaste sin el perfil `dev` (ej. `java -jar`). Usa `./mvnw spring-boot:run` o define `JWT_SECRET` |
+| `Connection refused` al arrancar | Docker Desktop cerrado o PostgreSQL local apagado; revisa `SPRING_DATASOURCE_URL` y `SPRING_DOCKER_COMPOSE_ENABLED` |
+| `Falta la variable de entorno JWT_SECRET` al arrancar | Define una llave de al menos 32 caracteres en `.env` o en las variables del despliegue |
 | `Schema-validation: missing table` | Falta la migración de esa entidad, o la migración tiene otro nombre de columna |
 | `Validate failed: Migration checksum mismatch` | Se editó una migración ya aplicada. Revierte el cambio y crea una migración nueva |
 | `Detected applied migration not resolved locally` al arrancar | Tu base local aplicó migraciones con nombres que después cambiaron (pasó con las de práctica: `V202610221000…` → `V5`). Si solo tienes datos de prueba, borra la base local y deja que se cree de nuevo: `docker compose down` y luego borra la carpeta `postgres_data/` |
@@ -493,7 +518,9 @@ Solo para `ADMIN`.
 | Método y ruta | Qué hace | Respuestas |
 |---|---|---|
 | `GET /api/admin/usuarios?buscar=&rol=&estado=` | Lista usuarios con búsqueda y filtros opcionales | 200 · 401 · 403 |
-| `POST /api/admin/usuarios` | Crea un usuario y devuelve una contraseña temporal | 201 · 400 · 401 · 403 · 409 · 422 |
+| `POST /api/admin/usuarios` | Crea el usuario y envía un enlace de un solo uso para configurar la contraseña | 201 · 400 · 401 · 403 · 409 · 422 · 503 |
+| `POST /api/admin/usuarios/{id}/reenviar-activacion` | Reenvía el enlace mientras la cuenta siga pendiente | 204 · 401 · 403 · 404 · 409 |
+| `POST /api/auth/activar-cuenta` | Configura la contraseña usando el token enviado por correo | 204 · 400 · 404 · 422 |
 | `PUT /api/admin/usuarios/{id}` | Edita nombres, apellidos, rol y programa; no cambia el correo | 200 · 400 · 401 · 403 · 404 · 422 |
 | `PATCH /api/admin/usuarios/{id}/estado` | Activa o desactiva. Cuerpo: `{"estado":"INACTIVO"}` | 200 · 400 · 401 · 403 · 404 · 422 |
 | `GET /api/admin/resumen` | Conteos de usuarios por rol, grupos, contenidos y ejercicios activos | 200 · 401 · 403 |

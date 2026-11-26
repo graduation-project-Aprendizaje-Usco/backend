@@ -6,7 +6,7 @@ Cada repositorio tiene además su propia documentación:
 - **README:** cómo correrlo, configuración y convenciones.
 - **implementacion.md:** qué se construyó, historia por historia.
 
-> Estado al 10 de noviembre de 2026. En el repositorio todavía no hay configuración de staging (SCRUM-13); por eso el despliegue descrito es el local. Cuando exista, se completa la sección 2.
+> Estado al 25 de noviembre de 2026. El despliegue local está verificado. La configuración de producción está preparada para Render + Neon (sección 2.3); la URL pública queda pendiente de configurar en el hosting.
 
 ---
 
@@ -56,7 +56,7 @@ flowchart LR
     subgraph Equipo del desarrollador
         B["Navegador"]
         V["Vite dev server<br/>:5173"]
-        S["Spring Boot (mvnw)<br/>:8080 · perfil dev"]
+        S["Spring Boot (mvnw)<br/>:8080 · application.properties"]
         subgraph Docker
             P[("postgres:17-alpine<br/>:5433 → 5432<br/>volumen ./postgres_data")]
             A["pgAdmin 4<br/>:5050"]
@@ -71,7 +71,7 @@ flowchart LR
 | Componente | Puerto en el equipo | Cómo se levanta |
 |---|---|---|
 | Frontend (Vite) | 5173 | `npm run dev` |
-| Backend (Spring Boot) | 8080 | `./mvnw spring-boot:run`. Con el perfil `dev`, Spring Boot levanta solo los contenedores de `compose.yaml` |
+| Backend (Spring Boot) | 8080 | `./mvnw spring-boot:run`; con `SPRING_DOCKER_COMPOSE_ENABLED=true`, Spring Boot levanta los contenedores de `compose.yaml` |
 | PostgreSQL 17 | 5433 (solo `127.0.0.1`) | Contenedor `postgres` de `compose.yaml`; datos en `postgres_data/` (no se versiona) |
 | pgAdmin 4 | 5050 (solo `127.0.0.1`) | Contenedor `pgadmin` de `compose.yaml` |
 
@@ -93,12 +93,16 @@ docker compose up -d postgres pgadmin
 
 Así el backend en contenedor se conecta a `postgres:5432` por la red interna de Docker.
 
-### 2.3 Staging (pendiente, SCRUM-13)
+### 2.3 Producción (Render + Neon)
 
-Aún no existe. Lo que ya está listo para cuando se configure:
-- **Llave de los tokens:** fuera del perfil `dev` la app exige `JWT_SECRET` y no arranca sin ella.
-- **Conexión:** la base se configura con `SPRING_DATASOURCE_*` y el origen del frontend con `CORS_ORIGINS`.
-- **Datos de prueba:** los usuarios de prueba solo se cargan con el perfil `dev`.
+La configuración de producción usa las mismas propiedades de `application.properties`, con valores del panel de Render:
+- **Conexión:** `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` y `SPRING_DATASOURCE_PASSWORD`; la URL Neon debe incluir `sslmode=require`.
+- **Puerto:** Render asigna `PORT` y la aplicación escucha en ese valor.
+- **Seguridad:** `JWT_SECRET` es obligatoria en todos los entornos; el registro sigue cerrado sin invitación.
+- **CORS e invitaciones:** `FRONTEND_URL` define el origen permitido por defecto y arma los enlaces `/registro?token=…`.
+- **Esquema:** Flyway aplica las migraciones; Hibernate solo valida (`ddl-auto=validate`) y `clean-disabled=true`. Render usa solo `classpath:db/migration`, sin usuarios de prueba.
+
+Guía completa y variables: [despliegue-render.md](despliegue-render.md).
 
 ## 3. Guía de instalación completa
 
@@ -147,7 +151,7 @@ Todas las rutas empiezan por `/api`. Las únicas públicas son `POST /auth/login
 | usuario (grupos) | `POST /grupos/{id}/estudiantes` | DOCENTE, ADMIN | Inscribe un estudiante por su correo |
 | usuario (invitaciones) | `GET/POST /grupos/{id}/invitaciones` y `POST /grupos/{id}/invitaciones/{id}/reenviar` | DOCENTE dueño, ADMIN | Carga el listado, consulta estado y reenvía invitaciones (SCRUM-150) |
 | usuario (invitaciones) | `GET /auth/invitacion?token=…` | público | Datos para precargar el registro desde el enlace |
-| usuario (administración) | `GET/POST /admin/usuarios`, `PUT /admin/usuarios/{id}` y `PATCH /admin/usuarios/{id}/estado` | ADMIN | Listar con búsqueda y filtros, crear con contraseña temporal, editar el rol y activar o desactivar (SCRUM-45) |
+| usuario (administración) | `GET/POST /admin/usuarios`, `PUT /admin/usuarios/{id}`, `PATCH /admin/usuarios/{id}/estado` y `POST /admin/usuarios/{id}/reenviar-activacion` | ADMIN | Listar, crear mediante correo de configuración de contraseña, editar el rol, activar/desactivar y reenviar el enlace pendiente (SCRUM-45) |
 | usuario (administración) | `GET /admin/resumen` | ADMIN | Conteos del panel: usuarios por rol, grupos y actividades activas (SCRUM-46) |
 | contenido (administración) | `GET /admin/actividades` | ADMIN | Catálogo de contenidos y ejercicios de todos los docentes, sin claves ni explicaciones (SCRUM-46) |
 | diagnostico | `POST /diagnosticos/intentos` | ESTUDIANTE | Inicia la prueba |
@@ -165,7 +169,7 @@ Todas las rutas empiezan por `/api`. Las únicas públicas son `POST /auth/login
 | contenido | `GET/POST /contenidos`, `PUT/DELETE /contenidos/{id}` y `PATCH /contenidos/{id}/estado` | DOCENTE | Crear, editar, activar o desactivar y borrar sus contenidos (SCRUM-43) |
 | contenido | `GET/POST /ejercicios`, `PUT/DELETE /ejercicios/{id}` y `PATCH /ejercicios/{id}/estado` | DOCENTE | Crear, editar, activar o desactivar y borrar sus ejercicios; si ya tienen intentos, solo se desactivan (SCRUM-43) |
 
-`GET /api/ping/{rol}` solo existe con los perfiles `dev` y `test`, para probar el acceso por rol.
+`GET /api/ping/{rol}` solo existe con el perfil `test`, para probar el acceso por rol.
 
 ## 5. Seguridad
 

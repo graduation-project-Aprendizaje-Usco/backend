@@ -7,7 +7,7 @@ Script de carga de los servicios críticos de RNF-02:
 
 ## Requisitos
 
-- Backend corriendo con perfil `dev` y PostgreSQL.
+- Backend corriendo con la configuración local de `.env` y PostgreSQL.
 - Docker Desktop (para ejecutar k6 sin instalarlo).
 - Al menos 30 estudiantes disponibles; el script los crea por API.
 
