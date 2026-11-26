@@ -136,6 +136,43 @@ class DiagnosticoControllerTest {
     }
 
     @Test
+    void lasOpcionesSeBarajanPorIntentoYSeMantienenEstables() throws Exception {
+        long id = idDeIniciar(tokenAna);
+
+        String primera = mockMvc.perform(get(BASE + "/" + id).header("Authorization", tokenAna))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String segunda = mockMvc.perform(get(BASE + "/" + id).header("Authorization", tokenAna))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        List<Integer> ordenPrimera = JsonPath.read(primera, "$.items[*].opciones[*].id");
+        List<Integer> ordenSegunda = JsonPath.read(segunda, "$.items[*].opciones[*].id");
+        List<String> letrasPrimerItem = JsonPath.read(primera, "$.items[0].opciones[*].letra");
+
+        assertThat(ordenSegunda).containsExactlyElementsOf(ordenPrimera);
+        assertThat(letrasPrimerItem).containsExactly("A", "B", "C", "D");
+    }
+
+    @Test
+    void dosIntentosDistintosRecibenOrdenesDistintos() throws Exception {
+        long idAna = idDeIniciar(tokenAna);
+        long idBeto = idDeIniciar(tokenBeto);
+
+        String intentoAna = mockMvc.perform(get(BASE + "/" + idAna).header("Authorization", tokenAna))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String intentoBeto = mockMvc.perform(get(BASE + "/" + idBeto).header("Authorization", tokenBeto))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        List<Integer> ordenAna = JsonPath.read(intentoAna, "$.items[*].opciones[*].id");
+        List<Integer> ordenBeto = JsonPath.read(intentoBeto, "$.items[*].opciones[*].id");
+
+        assertThat(ordenBeto).isNotEqualTo(ordenAna);
+    }
+
+    @Test
     void lasPreguntasNoRevelanLaRespuestaCorrecta() throws Exception {
         iniciar(tokenAna)
                 .andExpect(status().isCreated())

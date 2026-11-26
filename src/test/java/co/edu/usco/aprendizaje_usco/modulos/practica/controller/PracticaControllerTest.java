@@ -15,6 +15,8 @@ import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.RolRepository;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.UsuarioRepository;
 import co.edu.usco.aprendizaje_usco.security.JwtService;
 import co.edu.usco.aprendizaje_usco.security.UsuarioAutenticado;
+import com.jayway.jsonpath.JsonPath;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,9 +86,24 @@ class PracticaControllerTest {
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.nivel").isNumber())
                 .andExpect(jsonPath("$.opciones[0].texto").exists())
+                .andExpect(jsonPath("$.opciones[0].letra").value("A"))
+                .andExpect(jsonPath("$.opciones[1].letra").value("B"))
+                .andExpect(jsonPath("$.opciones[2].letra").value("C"))
+                .andExpect(jsonPath("$.opciones[3].letra").value("D"))
                 .andExpect(jsonPath("$.opciones[0].esCorrecta").doesNotExist())
                 .andExpect(jsonPath("$.explicacion").doesNotExist())
                 .andExpect(jsonPath("$.respuestaNumerica").doesNotExist());
+    }
+
+    @Test
+    void elOrdenDeLasOpcionesEsEstableParaElMismoEstudianteYEjercicio() throws Exception {
+        String primera = siguiente(tokenEstudiante);
+        String segunda = siguiente(tokenEstudiante);
+
+        assertThat(JsonPath.<Integer>read(segunda, "$.id"))
+                .isEqualTo(JsonPath.<Integer>read(primera, "$.id"));
+        assertThat(JsonPath.<List<Integer>>read(segunda, "$.opciones[*].id"))
+                .containsExactlyElementsOf(JsonPath.read(primera, "$.opciones[*].id"));
     }
 
     @Test
@@ -280,6 +297,14 @@ class PracticaControllerTest {
                                 {"ejercicioId": %d, "tiempoSeg": 10, "claveIdempotencia": "%s"}
                                 """.formatted(ejercicio, UUID.randomUUID())))
                 .andExpect(status().isBadRequest());
+    }
+
+    private String siguiente(String token) throws Exception {
+        return mockMvc.perform(get(BASE + "/siguiente")
+                        .param("asignatura", "CALCULO_DIFERENCIAL")
+                        .header("Authorization", token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
     }
 
     private void assertThatIntentos(long ejercicio, int esperados) {

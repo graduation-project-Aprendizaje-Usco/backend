@@ -5,6 +5,7 @@ import co.edu.usco.aprendizaje_usco.common.exception.NoAutenticadoException;
 import co.edu.usco.aprendizaje_usco.common.exception.ProhibidoException;
 import co.edu.usco.aprendizaje_usco.common.exception.RecursoNoEncontradoException;
 import co.edu.usco.aprendizaje_usco.common.exception.ReglaNegocioException;
+import co.edu.usco.aprendizaje_usco.common.util.MezcladorOpciones;
 import co.edu.usco.aprendizaje_usco.modulos.contenido.model.Competencia;
 import co.edu.usco.aprendizaje_usco.modulos.diagnostico.config.UmbralesDiagnostico;
 import co.edu.usco.aprendizaje_usco.modulos.diagnostico.dto.DimensionResponse;
@@ -34,6 +35,7 @@ import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Usuario;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -58,6 +60,8 @@ import org.springframework.transaction.annotation.Transactional;
  *  - Se acepta una respuesta que llega hasta {@code app.diagnostico.gracia-segundos}
  *    después del vencimiento (latencia de red); pasada esa tolerancia, se rechaza.
  *  - Las claves (opción correcta) nunca salen en las respuestas de la API.
+ *  - Las opciones se barajan por intento: la letra que ve el estudiante es la
+ *    posición mostrada, no la letra almacenada. La calificación usa el id.
  */
 @Service
 public class DiagnosticoService {
@@ -277,7 +281,8 @@ public class DiagnosticoService {
         boolean enCurso = intento.getEstado() == EstadoIntento.EN_CURSO;
 
         List<ItemDiagnosticoResponse> items = enCurso
-                ? itemRepository.findActivosConOpciones(prueba.getId()).stream().map(DiagnosticoService::item).toList()
+                ? itemRepository.findActivosConOpciones(prueba.getId()).stream()
+                        .map(item -> item(intento.getId(), item)).toList()
                 : List.of();
         int totalItems = enCurso ? items.size() : (int) itemRepository.countByPruebaIdAndActivoTrue(prueba.getId());
         List<RespuestaGuardadaResponse> respuestas = respuestaRepository.findDelIntento(intento.getId()).stream()
@@ -302,13 +307,18 @@ public class DiagnosticoService {
                         d.getNivel().name(), d.getNivel().getDescripcion())).toList());
     }
 
-    private static ItemDiagnosticoResponse item(Item item) {
+    private static ItemDiagnosticoResponse item(long intentoId, Item item) {
+        List<Opcion> opciones = MezcladorOpciones.mezclar(item.getOpciones(), intentoId, item.getId());
+        List<OpcionResponse> opcionesPresentadas = new ArrayList<>(opciones.size());
+        for (int posicion = 0; posicion < opciones.size(); posicion++) {
+            Opcion opcion = opciones.get(posicion);
+            opcionesPresentadas.add(new OpcionResponse(
+                    opcion.getId(), MezcladorOpciones.letra(posicion), opcion.getTexto()));
+        }
         return new ItemDiagnosticoResponse(item.getId(), item.getNumero(), item.getEnunciado(),
                 item.getImagen(), item.getImagenAlt(),
                 new DimensionResponse(item.getCompetencia().getCodigo(), item.getCompetencia().getNombre()),
-                item.getOpciones().stream()
-                        .map(o -> new OpcionResponse(o.getId(), o.getLetra(), o.getTexto()))
-                        .toList());
+                opcionesPresentadas);
     }
 
     private Instant ahora() {

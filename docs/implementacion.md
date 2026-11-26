@@ -109,6 +109,8 @@ El módulo lo construyó Jorel con 63 pruebas (casos borde, puntaje, categorías
 | SCRUM-144 Casos borde | Cubiertos por las pruebas de Jorel (intento vencido, ajeno, ítem inexistente, finalizar dos veces) | Hecha |
 | SCRUM-145 Verificación manual de CA-02 a CA-04 | Ejecutada en local (staging aún no existe). PF-03, PF-04, PF-05 y PV-01 aprobadas; PV-01 tras corregir el frontend. PU-01, PU-07 y PU-12 necesitan estudiantes reales | Falta adjuntar capturas y marcar la matriz |
 
+**Barajado de opciones.** El diagnóstico y la práctica presentan las opciones en un orden aleatorio estable por intento/estudiante (`MezcladorOpciones`). La letra que ve el estudiante es la posición mostrada (A–D), no la almacenada; la calificación no cambia porque usa el `id` de la opción. Así la clave no queda siempre en la misma posición.
+
 **Cobertura** de `modulos/diagnostico/service` (criterio ≥ 70 %): **98,8 % de líneas, 92,5 % de ramas**. Se mide sin tocar el `pom.xml`:
 
 ```bash

@@ -23,14 +23,16 @@ Authorization: Bearer {{token}}
 POST {{base}}/api/diagnosticos/intentos
 Authorization: Bearer {{token}}
 
-> {% client.global.set("intento", response.body.id); client.global.set("item1", response.body.items[0].id); client.global.set("opcionB", response.body.items[0].opciones[1].id); %}
+# Las opciones se barajan por intento: la letra mostrada no identifica la clave.
+# Para el ítem 1, la opción correcta es la que tiene el texto $5$.
+> {% client.global.set("intento", response.body.id); client.global.set("item1", response.body.items[0].id); client.global.set("opcionCorrecta", response.body.items[0].opciones.find(o => o.texto === '$5$').id); %}
 
-### 4. Responder la pregunta 1 con la opción B (la correcta)
+### 4. Responder la pregunta 1 con la opción correcta (texto $5$)
 PUT {{base}}/api/diagnosticos/intentos/{{intento}}/respuestas/{{item1}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "opcionId": {{opcionB}} }
+{ "opcionId": {{opcionCorrecta}} }
 
 ### 5. Consultar el intento
 # Al principio del JSON: segundosRestantes, totalRespondidas (1) y "respuestas" con la
@@ -59,7 +61,7 @@ PUT {{base}}/api/diagnosticos/intentos/{{intento}}/respuestas/{{item1}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "opcionId": {{opcionB}} }
+{ "opcionId": {{opcionCorrecta}} }
 
 ### 9. Error esperado 403: el docente no presenta la prueba
 # Primero haz login con docente@aprendizaje.test / Docente2026* y copia el token aquí.
