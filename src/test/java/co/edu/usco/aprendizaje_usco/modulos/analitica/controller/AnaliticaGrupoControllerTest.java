@@ -162,6 +162,54 @@ class AnaliticaGrupoControllerTest {
     }
 
     @Test
+    void reporteDocenteNoExponeCorreosYConservaLaValidacionDePropiedad() throws Exception {
+        intento(ana, "DIF-ALG-1-01", 1, true, "2026-08-10T15:00:00Z");
+
+        mockMvc.perform(get(BASE + "/" + grupoId + "/reporte")
+                        .header("Authorization", tokenDocente))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estudiantes[0].nombres").value("Ana"))
+                .andExpect(jsonPath("$.estudiantes[0].enRiesgo").value(false))
+                .andExpect(jsonPath("$.estudiantes[0].correo").doesNotExist());
+
+        mockMvc.perform(get(BASE + "/" + grupoId + "/reporte")
+                        .header("Authorization", tokenOtroDocente))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void reporteAdminAgregaActividadYFiltraPorFechasSoloParaAdministradores() throws Exception {
+        intento(ana, "DIF-ALG-1-01", 1, true, "2026-08-10T15:00:00Z");
+        intento(ana, "DIF-ALG-1-01", 2, false, "2026-07-10T15:00:00Z");
+        diagnostico(ana, "ALTO_RIESGO", "2026-08-09T15:00:00Z", "ALGEBRAICA", 2, "BAJO");
+
+        mockMvc.perform(get("/api/admin/reportes")
+                        .header("Authorization", tokenAdmin)
+                        .param("desde", "2026-08-01")
+                        .param("hasta", "2026-08-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.practica.intentos").value(1))
+                .andExpect(jsonPath("$.practica.aciertos").value(1))
+                .andExpect(jsonPath("$.practica.porcentajeAcierto").value(100.0))
+                .andExpect(jsonPath("$.practica.estudiantesConActividad").value(1))
+                .andExpect(jsonPath("$.diagnostico.finalizados").value(1))
+                .andExpect(jsonPath("$.diagnostico.puntajePromedio").value(2.0))
+                .andExpect(jsonPath("$.diagnostico.porcentajePromedio").value(25.0))
+                .andExpect(jsonPath("$.diagnostico.estudiantesConActividad").value(1))
+                .andExpect(jsonPath("$.diagnostico.distribucion[0].categoria").value("ALTO_RIESGO"))
+                .andExpect(jsonPath("$.diagnostico.distribucion[0].cantidad").value(1));
+
+        mockMvc.perform(get("/api/admin/reportes").header("Authorization", tokenDocente))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/admin/reportes")
+                        .header("Authorization", tokenAdmin)
+                        .param("desde", "2026-09-01")
+                        .param("hasta", "2026-08-01"))
+                .andExpect(status().isUnprocessableContent());
+    }
+
+    @Test
     void soloElDocenteDuenoPuedeConsultarElGrupo() throws Exception {
         mockMvc.perform(get(BASE + "/" + grupoId).header("Authorization", tokenOtroDocente))
                 .andExpect(status().isForbidden());

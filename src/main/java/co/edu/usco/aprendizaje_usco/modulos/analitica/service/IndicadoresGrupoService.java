@@ -10,8 +10,10 @@ import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.DimensionGrupoResponse
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.DistribucionCategoriaResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.EjercicioErroresResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.EstudianteGrupoResponse;
+import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.EstudianteReporteResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.EvolucionSemanalResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.GrupoInfoResponse;
+import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.ReporteGrupoResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.ResumenGrupoResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.repository.AnaliticaGrupoRepository;
 import co.edu.usco.aprendizaje_usco.modulos.contenido.model.Competencia;
@@ -136,6 +138,35 @@ public class IndicadoresGrupoService {
                 filas,
                 topEjercicios(ids, codigoCompetencia, rango),
                 evolucion(ids, codigoCompetencia, rango));
+    }
+
+    public ReporteGrupoResponse reporte(Long docenteId, Long grupoId, String competencia,
+                                        LocalDate desde, LocalDate hasta) {
+        ResumenGrupoResponse resumen = resumen(docenteId, grupoId, competencia, desde, hasta);
+        return new ReporteGrupoResponse(
+                resumen.grupo(),
+                resumen.totalEstudiantes(),
+                resumen.estudiantesConActividad(),
+                resumen.promedioGeneral(),
+                resumen.dimensiones(),
+                resumen.distribucionCategorias(),
+                resumen.estudiantesEnRiesgo(),
+                resumen.estudiantes().stream()
+                        .map(estudiante -> new EstudianteReporteResponse(
+                                estudiante.id(),
+                                estudiante.nombres(),
+                                estudiante.apellidos(),
+                                estudiante.intentos(),
+                                estudiante.aciertos(),
+                                estudiante.promedio(),
+                                estudiante.nivel(),
+                                estudiante.categoriaDiagnostico(),
+                                estudiante.sinActividad(),
+                                estudiante.enRiesgo(),
+                                estudiante.motivosRiesgo()))
+                        .toList(),
+                resumen.topEjerciciosErrores(),
+                resumen.evolucionGeneral());
     }
 
     public DetalleEstudianteGrupoResponse detalle(Long docenteId, Long grupoId, Long estudianteId,

@@ -1,6 +1,7 @@
 package co.edu.usco.aprendizaje_usco.modulos.analitica.controller;
 
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.DetalleEstudianteGrupoResponse;
+import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.ReporteGrupoResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.dto.ResumenGrupoResponse;
 import co.edu.usco.aprendizaje_usco.modulos.analitica.service.IndicadoresGrupoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,6 +45,21 @@ public class AnaliticaGrupoController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
             @AuthenticationPrincipal Jwt jwt) {
         return indicadoresService.resumen(usuarioId(jwt), grupoId, competencia, desde, hasta);
+    }
+
+    @GetMapping("/{grupoId}/reporte")
+    @Operation(summary = "Reporte de un grupo sin correos de estudiantes",
+            description = "Solo el docente dueño del grupo puede consultarlo.")
+    public ReporteGrupoResponse reporte(
+            @PathVariable Long grupoId,
+            @Parameter(description = "ALGEBRAICA, LOGICA o FUNCIONAL")
+            @RequestParam(required = false) String competencia,
+            @Parameter(description = "Desde (incluido), AAAA-MM-DD")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @Parameter(description = "Hasta (incluido), AAAA-MM-DD")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            @AuthenticationPrincipal Jwt jwt) {
+        return indicadoresService.reporte(usuarioId(jwt), grupoId, competencia, desde, hasta);
     }
 
     @GetMapping("/{grupoId}/estudiantes/{estudianteId}")

@@ -461,6 +461,7 @@ Solo el docente dueño del grupo puede consultar sus indicadores. El servidor ob
 | Método y ruta | Qué hace | Respuestas |
 |---|---|---|
 | `GET /api/analitica/grupos/{grupoId}?competencia=&desde=&hasta=` | Resumen del grupo: total de estudiantes, estudiantes con actividad, promedio general, promedio por dimensión, distribución de categorías, estudiantes en riesgo y tabla de estudiantes | 200 · 400 (competencia inválida) · 401 · 403 · 404 · 422 (`desde` posterior a `hasta`) |
+| `GET /api/analitica/grupos/{grupoId}/reporte?competencia=&desde=&hasta=` | Datos del reporte del grupo y filas de estudiantes sin correo electrónico | 200 · 400 · 401 · 403 · 404 · 422 |
 | `GET /api/analitica/grupos/{grupoId}/estudiantes/{estudianteId}?competencia=&desde=&hasta=` | Detalle de un estudiante del grupo: práctica por dimensión y último diagnóstico | 200 · 400 · 401 · 403 · 404 (estudiante fuera del grupo) · 422 |
 
 - **Periodo:** `desde` y `hasta` son fechas `AAAA-MM-DD`, ambas incluidas y en hora de Colombia. Si se omiten, se usa todo el historial. Los filtros se aplican a `intento_practica.creado_en` y a `intento_diagnostico.finalizado_en`.
@@ -470,6 +471,7 @@ Solo el docente dueño del grupo puede consultar sus indicadores. El servidor ob
 - **Estudiante en riesgo:** último diagnóstico `ALTO_RIESGO` o promedio de práctica menor al 50 %. Un estudiante sin actividad se informa con `sinActividad: true` y no se marca en riesgo por ese solo hecho.
 - **Detalle:** incluye las dimensiones del estudiante y el último diagnóstico con sus resultados por competencia. La pantalla reutiliza `GET /api/historial?estudianteId=…` para el historial.
 - **Indicadores derivados:** el resumen agrega `dimensionMasDebil`, `topEjerciciosErrores` (5 ejercicios con más errores) y `evolucionGeneral` (promedio semanal del grupo). Se calculan con los mismos filtros de competencia y fechas.
+- El endpoint de reporte reutiliza las validaciones de propiedad y filtros del resumen, pero su DTO de estudiante omite el correo.
 
 El contrato y las decisiones de implementación están en [`docs/code/indicadores-grupo-docente.md`](code/indicadores-grupo-docente.md).
 
@@ -522,7 +524,10 @@ Solo para `ADMIN`.
 | `PUT /api/admin/usuarios/{id}` | Edita nombres, apellidos, rol y programa; no cambia el correo | 200 · 400 · 401 · 403 · 404 · 422 |
 | `PATCH /api/admin/usuarios/{id}/estado` | Activa o desactiva. Cuerpo: `{"estado":"INACTIVO"}` | 200 · 400 · 401 · 403 · 404 · 422 |
 | `GET /api/admin/resumen` | Conteos de usuarios por rol, grupos, contenidos y ejercicios activos | 200 · 401 · 403 |
+| `GET /api/admin/reportes?desde=&hasta=` | Conteos del sistema y métricas agregadas de práctica y diagnósticos; fechas inclusivas en hora de Colombia | 200 · 401 · 403 · 422 (`desde` posterior a `hasta`) |
 | `GET /api/admin/actividades` | Catálogo de contenidos y ejercicios de todos los docentes, sin claves ni explicaciones | 200 · 401 · 403 |
+
+Los reportes administrativos no incluyen datos personales. Los conteos de práctica consideran cada intento registrado, incluidos los reintentos; los diagnósticos cuentan todos los intentos finalizados dentro del periodo. Los conteos generales de usuarios, grupos y contenidos son una fotografía actual y no dependen del rango de fechas.
 
 El administrador no puede desactivarse ni quitarse el rol ADMIN. Un usuario INACTIVO no puede iniciar sesión. Los grupos y sus estudiantes se consultan con `GET /api/grupos` y `GET /api/grupos/{id}/estudiantes`, que admiten ADMIN.
 
