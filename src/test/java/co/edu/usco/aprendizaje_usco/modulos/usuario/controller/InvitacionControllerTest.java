@@ -115,7 +115,7 @@ class InvitacionControllerTest {
                 .andExpect(status().isForbidden());
 
         verify(resendEmailService, times(2)).enviar(anyString(),
-                eq("Invitación a Aprendizaje USCO"), anyString());
+                eq("Invitación a Aprendizaje USCO"), anyString(), anyString());
     }
 
     @Test
@@ -131,7 +131,7 @@ class InvitacionControllerTest {
                 .andExpect(jsonPath("$.estado").value("INVITADO"));
 
         verify(resendEmailService).enviar(eq("u20267777777@usco.edu.co"),
-                eq("Invitación a Aprendizaje USCO"), texto.capture());
+                eq("Invitación a Aprendizaje USCO"), texto.capture(), anyString());
         String tokenNuevo = tokenDeTexto(texto.getValue());
         assertThat(tokenNuevo).isNotEqualTo(creada.token());
         assertThat(texto.getValue()).contains("http://localhost:5173/registro?token=" + tokenNuevo);
@@ -145,7 +145,7 @@ class InvitacionControllerTest {
     @Test
     void conservaLasInvitacionesYDevuelve503SiResendFalla() throws Exception {
         doThrow(new ServicioNoDisponibleException("Resend no disponible"))
-                .when(resendEmailService).enviar(anyString(), anyString(), anyString());
+                .when(resendEmailService).enviar(anyString(), anyString(), anyString(), anyString());
 
         mockMvc.perform(json(post("/api/grupos/{id}/invitaciones", grupoId), """
                         {"estudiantes":[

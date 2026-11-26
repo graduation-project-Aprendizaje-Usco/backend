@@ -341,7 +341,7 @@ class AdminUsuarioControllerTest {
 
     private String tokenDelCorreo(String correo) {
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(resendEmailService, atLeastOnce()).enviar(eq(correo), anyString(), captor.capture());
+        verify(resendEmailService, atLeastOnce()).enviar(eq(correo), anyString(), captor.capture(), anyString());
         return captor.getAllValues().stream()
                 .map(texto -> {
                     Matcher matcher = Pattern.compile("token=([A-Za-z0-9_-]+)").matcher(texto);

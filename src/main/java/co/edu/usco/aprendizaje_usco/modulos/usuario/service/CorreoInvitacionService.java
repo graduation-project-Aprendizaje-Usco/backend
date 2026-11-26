@@ -7,9 +7,11 @@ import org.springframework.stereotype.Service;
 public class CorreoInvitacionService {
 
     private final ResendEmailService resendEmailService;
+    private final PlantillasCorreo plantillasCorreo;
 
-    public CorreoInvitacionService(ResendEmailService resendEmailService) {
+    public CorreoInvitacionService(ResendEmailService resendEmailService, PlantillasCorreo plantillasCorreo) {
         this.resendEmailService = resendEmailService;
+        this.plantillasCorreo = plantillasCorreo;
     }
 
     public void enviar(String correo, String enlace) {
@@ -23,7 +25,8 @@ public class CorreoInvitacionService {
 
                 Si no esperabas esta invitación, ignora este mensaje.
                 """.formatted(enlace);
-        resendEmailService.enviar(correo, "Invitación a Aprendizaje USCO", texto);
+        resendEmailService.enviar(correo, "Invitación a Aprendizaje USCO", texto,
+                plantillasCorreo.invitacion(enlace));
     }
 
     public void enviarConfiguracionCuenta(String correo, String nombres, String enlace, long vigenciaHoras) {
@@ -37,6 +40,7 @@ public class CorreoInvitacionService {
 
                 Si no esperabas este mensaje, puedes ignorarlo.
                 """.formatted(nombres, vigenciaHoras, enlace);
-        resendEmailService.enviar(correo, "Configura tu contraseña de Aprendizaje USCO", texto);
+        resendEmailService.enviar(correo, "Configura tu contraseña de Aprendizaje USCO", texto,
+                plantillasCorreo.activacion(nombres, enlace, vigenciaHoras));
     }
 }

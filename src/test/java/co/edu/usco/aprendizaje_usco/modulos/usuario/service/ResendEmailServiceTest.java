@@ -37,13 +37,14 @@ class ResendEmailServiceTest {
                           "from": "Aprendizaje USCO <noreply@aprendizaje-usco.tech>",
                           "to": ["docente@usco.edu.co"],
                           "subject": "Asunto de prueba",
-                          "text": "Mensaje de prueba"
+                          "text": "Mensaje de prueba",
+                          "html": "<p>Mensaje HTML</p>"
                         }
                         """))
                 .andRespond(withSuccess("{\"id\":\"email-id\"}", MediaType.APPLICATION_JSON));
         ResendEmailService service = new ResendEmailService(builder.build(), "re_test_key", FROM);
 
-        service.enviar("docente@usco.edu.co", "Asunto de prueba", "Mensaje de prueba");
+        service.enviar("docente@usco.edu.co", "Asunto de prueba", "Mensaje de prueba", "<p>Mensaje HTML</p>");
 
         server.verify();
     }
@@ -54,7 +55,7 @@ class ResendEmailServiceTest {
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         ResendEmailService service = new ResendEmailService(builder.build(), " ", FROM);
 
-        assertThatThrownBy(() -> service.enviar("docente@usco.edu.co", "Asunto", "Texto"))
+        assertThatThrownBy(() -> service.enviar("docente@usco.edu.co", "Asunto", "Texto", "<p>Texto</p>"))
                 .isInstanceOf(ServicioNoDisponibleException.class)
                 .hasMessageContaining("RESEND_API_KEY");
 
@@ -71,7 +72,7 @@ class ResendEmailServiceTest {
                         .body("{\"name\":\"authentication_error\",\"message\":\"Invalid API key\"}"));
         ResendEmailService service = new ResendEmailService(builder.build(), "re_secret_test", FROM);
 
-        assertThatThrownBy(() -> service.enviar("docente@usco.edu.co", "Asunto", "Texto"))
+        assertThatThrownBy(() -> service.enviar("docente@usco.edu.co", "Asunto", "Texto", "<p>Texto</p>"))
                 .isInstanceOf(ServicioNoDisponibleException.class)
                 .hasMessageNotContaining("re_secret_test");
 
@@ -88,7 +89,7 @@ class ResendEmailServiceTest {
                         .body("{\"name\":\"validation_error\",\"message\":\"Invalid recipient\"}"));
         ResendEmailService service = new ResendEmailService(builder.build(), "re_test_key", FROM);
 
-        assertThatThrownBy(() -> service.enviar("no-es-un-correo", "Asunto", "Texto"))
+        assertThatThrownBy(() -> service.enviar("no-es-un-correo", "Asunto", "Texto", "<p>Texto</p>"))
                 .isInstanceOf(ServicioNoDisponibleException.class);
 
         server.verify();
@@ -102,7 +103,7 @@ class ResendEmailServiceTest {
                 .andRespond(withException(new IOException("connection timed out")));
         ResendEmailService service = new ResendEmailService(builder.build(), "re_test_key", FROM);
 
-        assertThatThrownBy(() -> service.enviar("docente@usco.edu.co", "Asunto", "Texto"))
+        assertThatThrownBy(() -> service.enviar("docente@usco.edu.co", "Asunto", "Texto", "<p>Texto</p>"))
                 .isInstanceOf(ServicioNoDisponibleException.class)
                 .hasMessageContaining("conectar");
 

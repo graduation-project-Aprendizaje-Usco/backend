@@ -35,7 +35,7 @@ public class ResendEmailService {
         this.remitente = remitente;
     }
 
-    public void enviar(String destinatario, String asunto, String texto) {
+    public void enviar(String destinatario, String asunto, String texto, String html) {
         if (destinatario == null || destinatario.isBlank()) {
             throw new ReglaNegocioException("El correo destinatario es obligatorio.");
         }
@@ -44,7 +44,7 @@ public class ResendEmailService {
                     "El envío de correo no está configurado: falta RESEND_API_KEY.");
         }
 
-        SolicitudCorreo solicitud = new SolicitudCorreo(remitente, List.of(destinatario), asunto, texto);
+        SolicitudCorreo solicitud = new SolicitudCorreo(remitente, List.of(destinatario), asunto, texto, html);
         RespuestaCorreo respuesta;
         try {
             respuesta = restClient.post()
@@ -76,7 +76,7 @@ public class ResendEmailService {
         }
     }
 
-    private record SolicitudCorreo(String from, List<String> to, String subject, String text) {
+    private record SolicitudCorreo(String from, List<String> to, String subject, String text, String html) {
     }
 
     public record RespuestaCorreo(String id) {

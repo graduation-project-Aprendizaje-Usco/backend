@@ -287,7 +287,7 @@ class FlujosCompletosE2ETest {
 
     private void activarCuenta(String correo, String password) throws Exception {
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(resendEmailService, atLeastOnce()).enviar(eq(correo), anyString(), captor.capture());
+        verify(resendEmailService, atLeastOnce()).enviar(eq(correo), anyString(), captor.capture(), anyString());
         String token = captor.getAllValues().stream()
                 .map(texto -> {
                     Matcher matcher = Pattern.compile("token=([A-Za-z0-9_-]+)").matcher(texto);

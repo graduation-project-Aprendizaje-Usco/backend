@@ -546,6 +546,11 @@ Configura `RESEND_API_KEY` y, si necesitas cambiar el remitente, `MAIL_FROM`.
 La API Key no se registra ni se incluye en el frontend. El dominio del remitente
 debe estar verificado en Resend.
 
+Los mensajes incluyen una versión HTML con la identidad visual USCO y una
+versión de texto plano. Las plantillas están en
+`src/main/resources/templates/email`; el logo se sirve desde el `FRONTEND_URL`
+configurado para la aplicación.
+
 Si falta la clave, Resend rechaza la petición o no hay conexión, los endpoints
 responden 503 y no simulan un envío exitoso. Las invitaciones grupales quedan
 guardadas para poder reenviarlas desde el panel; si un lote falla parcialmente,
