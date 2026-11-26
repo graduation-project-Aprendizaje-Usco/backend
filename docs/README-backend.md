@@ -301,6 +301,7 @@ Cuando `estado` es `FINALIZADO`, `items` va vacío y `resultado` trae (lo mismo 
 Reglas:
 
 - **Las claves nunca salen de la API** (las opciones no traen `esCorrecta`).
+- **Las opciones se barajan por intento**: la `letra` de cada opción es la posición mostrada (A–D), no la letra almacenada. El orden es estable para el mismo intento y distinto entre estudiantes; la calificación sigue usando el `id` de la opción.
 - **El tiempo lo controla el servidor**: 36 minutos (1,5 min por pregunta). `segundosRestantes` es para el cronómetro del frontend. Un intento vencido se finaliza "por tiempo" en cuanto el estudiante lo consulta o responde, y si no vuelve, el barrido programado lo cierra en menos de un minuto. La fecha de fin de un intento vencido es la de vencimiento.
 - Pregunta sin responder = incorrecta. Escalas del instrumento v2.0:
 

@@ -4,6 +4,7 @@ import co.edu.usco.aprendizaje_usco.common.exception.ConflictoException;
 import co.edu.usco.aprendizaje_usco.common.exception.RecursoNoEncontradoException;
 import co.edu.usco.aprendizaje_usco.common.exception.ReglaNegocioException;
 import co.edu.usco.aprendizaje_usco.common.exception.SolicitudInvalidaException;
+import co.edu.usco.aprendizaje_usco.common.util.MezcladorOpciones;
 import co.edu.usco.aprendizaje_usco.modulos.contenido.dto.CompetenciaResponse;
 import co.edu.usco.aprendizaje_usco.modulos.contenido.model.Ejercicio;
 import co.edu.usco.aprendizaje_usco.modulos.contenido.model.OpcionEjercicio;
@@ -24,6 +25,7 @@ import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.UsuarioRepository
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +89,7 @@ public class PracticaService {
 
         Ejercicio ejercicio = ejercicioRepository.findActivoConOpciones(seleccion.ejercicio().id())
                 .orElseThrow(() -> new RecursoNoEncontradoException("El ejercicio seleccionado no esta disponible"));
-        return aRespuesta(ejercicio);
+        return aRespuesta(usuarioId, ejercicio);
     }
 
     @Transactional
@@ -224,15 +226,20 @@ public class PracticaService {
         return new SeleccionEjercicioService.Estado(niveles, diagnostico, historial, acertados, recientesIds, ahora);
     }
 
-    private static EjercicioPracticaResponse aRespuesta(Ejercicio ejercicio) {
-        List<OpcionPracticaResponse> opciones = ejercicio.getOpciones().stream()
-                .map(o -> new OpcionPracticaResponse(o.getId(), o.getLetra(), o.getTexto()))
-                .toList();
+    private static EjercicioPracticaResponse aRespuesta(Long usuarioId, Ejercicio ejercicio) {
+        List<OpcionEjercicio> opciones = MezcladorOpciones.mezclar(
+                ejercicio.getOpciones(), usuarioId, ejercicio.getId());
+        List<OpcionPracticaResponse> opcionesPresentadas = new ArrayList<>(opciones.size());
+        for (int posicion = 0; posicion < opciones.size(); posicion++) {
+            OpcionEjercicio opcion = opciones.get(posicion);
+            opcionesPresentadas.add(new OpcionPracticaResponse(
+                    opcion.getId(), MezcladorOpciones.letra(posicion), opcion.getTexto()));
+        }
         return new EjercicioPracticaResponse(
                 ejercicio.getId(), ejercicio.getCodigo(), ejercicio.getEnunciado(), ejercicio.getTipo(),
                 ejercicio.getNivel().getValor(),
                 new CompetenciaResponse(ejercicio.getCompetencia().getCodigo(), ejercicio.getCompetencia().getNombre()),
-                opciones, ejercicio.getPista());
+                opcionesPresentadas, ejercicio.getPista());
     }
 
     private record IntentosPrevios(IntentoPractica existente, int numeroIntento, boolean primerIntentoCorrecto) {

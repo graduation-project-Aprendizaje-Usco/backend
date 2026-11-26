@@ -386,7 +386,7 @@ Errores:
 | 403 | Rol distinto de `ESTUDIANTE` |
 | 404 | No hay ejercicios activos de esa asignatura |
 
-Nunca incluye `esCorrecta`, `respuestaNumerica` ni `explicacion`.
+Nunca incluye `esCorrecta`, `respuestaNumerica` ni `explicacion`. Las opciones se barajan de forma estable para el mismo estudiante y ejercicio; la `letra` es la posición mostrada (A–D), no la almacenada, y la respuesta se envía con el `id`.
 
 ### 7.2 `POST /api/practica/intentos`
 
