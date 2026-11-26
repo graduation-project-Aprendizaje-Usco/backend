@@ -1,0 +1,69 @@
+### Prueba diagnóstica — peticiones de prueba manual
+# Abre este archivo en IntelliJ (HTTP Client) o en VS Code con la extensión "REST Client".
+# Requisitos: backend corriendo con el perfil dev (./mvnw spring-boot:run).
+# Ejecuta las peticiones en orden: el login guarda el token y "Iniciar" guarda el id del intento.
+
+@base = http://localhost:8080
+
+### 1. Login del estudiante de prueba (perfil dev)
+# @name login
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{ "correo": "estudiante@aprendizaje.test", "password": "Estudiante2026*" }
+
+> {% client.global.set("token", response.body.token); %}
+
+### 2. ¿Ya tengo intento? (204 la primera vez)
+GET {{base}}/api/diagnosticos/intentos/actual
+Authorization: Bearer {{token}}
+
+### 3. Iniciar la prueba (201 la primera vez, 200 después)
+# @name iniciar
+POST {{base}}/api/diagnosticos/intentos
+Authorization: Bearer {{token}}
+
+# Las opciones se barajan por intento: la letra mostrada no identifica la clave.
+# Para el ítem 1, la opción correcta es la que tiene el texto $5$.
+> {% client.global.set("intento", response.body.id); client.global.set("item1", response.body.items[0].id); client.global.set("opcionCorrecta", response.body.items[0].opciones.find(o => o.texto === '$5$').id); %}
+
+### 4. Responder la pregunta 1 con la opción correcta (texto $5$)
+PUT {{base}}/api/diagnosticos/intentos/{{intento}}/respuestas/{{item1}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "opcionId": {{opcionCorrecta}} }
+
+### 5. Consultar el intento
+# Al principio del JSON: segundosRestantes, totalRespondidas (1) y "respuestas" con la
+# pregunta 1 y la opción elegida. "items" (al final) trae SIEMPRE las 24 preguntas, para
+# que el frontend pueda pintar la prueba completa al retomarla.
+GET {{base}}/api/diagnosticos/intentos/{{intento}}
+Authorization: Bearer {{token}}
+
+### 6. Error esperado 422: la opción 1 es de la pregunta 1, no de la pregunta 2
+PUT {{base}}/api/diagnosticos/intentos/{{intento}}/respuestas/2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "opcionId": 1 }
+
+### 7. Entregar la prueba (puntaje 1 → ALTO_RIESGO si solo respondiste la pregunta 1)
+POST {{base}}/api/diagnosticos/intentos/{{intento}}/finalizar
+Authorization: Bearer {{token}}
+
+### 7b. Solo el resultado (antes de finalizar responde 409)
+GET {{base}}/api/diagnosticos/intentos/{{intento}}/resultado
+Authorization: Bearer {{token}}
+
+### 8. Error esperado 409: ya está finalizada
+PUT {{base}}/api/diagnosticos/intentos/{{intento}}/respuestas/{{item1}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "opcionId": {{opcionCorrecta}} }
+
+### 9. Error esperado 403: el docente no presenta la prueba
+# Primero haz login con docente@aprendizaje.test / Docente2026* y copia el token aquí.
+POST {{base}}/api/diagnosticos/intentos
+Authorization: Bearer PEGA_AQUI_EL_TOKEN_DEL_DOCENTE
