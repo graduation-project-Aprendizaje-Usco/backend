@@ -159,6 +159,7 @@ public class IndicadoresGrupoService {
                                 estudiante.intentos(),
                                 estudiante.aciertos(),
                                 estudiante.promedio(),
+                                estudiante.porcentajeDiagnostico(),
                                 estudiante.nivel(),
                                 estudiante.categoriaDiagnostico(),
                                 estudiante.sinActividad(),
@@ -299,6 +300,8 @@ public class IndicadoresGrupoService {
                 .mapToLong(AnaliticaGrupoRepository.MetricasEstudianteDimension::aciertos)
                 .sum();
         BigDecimal promedio = porcentaje(aciertos, intentos);
+        BigDecimal porcentajeDiagnostico = diagnostico == null
+                ? null : porcentaje(diagnostico.puntaje(), diagnostico.total());
         String nivel = promedio == null ? "SIN_EVALUAR" : NivelDominio.desde(promedio).name();
         String categoria = diagnostico == null ? "SIN_DIAGNOSTICO" : diagnostico.categoria().name();
         List<String> motivos = new ArrayList<>();
@@ -316,6 +319,7 @@ public class IndicadoresGrupoService {
                 intentos,
                 aciertos,
                 promedio,
+                porcentajeDiagnostico,
                 nivel,
                 categoria,
                 intentos == 0,

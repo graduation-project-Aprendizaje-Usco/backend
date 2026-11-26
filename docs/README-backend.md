@@ -467,6 +467,7 @@ Solo el docente dueño del grupo puede consultar sus indicadores. El servidor ob
 - **Periodo:** `desde` y `hasta` son fechas `AAAA-MM-DD`, ambas incluidas y en hora de Colombia. Si se omiten, se usa todo el historial. Los filtros se aplican a `intento_practica.creado_en` y a `intento_diagnostico.finalizado_en`.
 - **Competencia:** si se envía, solo se calculan las métricas de esa dimensión; la distribución de categorías sigue siendo global.
 - **Promedio por dimensión:** promedio simple de los porcentajes individuales de los estudiantes con actividad en esa dimensión.
+- **Promedio individual:** `promedio` y `nivel` corresponden solo a la práctica. `porcentajeDiagnostico` es el resultado porcentual del último diagnóstico finalizado; permanece nulo cuando no existe un diagnóstico en el periodo.
 - **Categorías:** última categoría de diagnóstico finalizado por estudiante (`ALTO_RIESGO`, `RIESGO_MODERADO`, `NIVEL_ADECUADO`) o `SIN_DIAGNOSTICO`.
 - **Estudiante en riesgo:** último diagnóstico `ALTO_RIESGO` o promedio de práctica menor al 50 %. Un estudiante sin actividad se informa con `sinActividad: true` y no se marca en riesgo por ese solo hecho.
 - **Detalle:** incluye las dimensiones del estudiante y el último diagnóstico con sus resultados por competencia. La pantalla reutiliza `GET /api/historial?estudianteId=…` para el historial.

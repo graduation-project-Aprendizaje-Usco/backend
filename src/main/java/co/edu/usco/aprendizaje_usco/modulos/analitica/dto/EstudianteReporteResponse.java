@@ -10,6 +10,7 @@ public record EstudianteReporteResponse(
         long intentos,
         long aciertos,
         BigDecimal promedio,
+        BigDecimal porcentajeDiagnostico,
         String nivel,
         String categoriaDiagnostico,
         boolean sinActividad,

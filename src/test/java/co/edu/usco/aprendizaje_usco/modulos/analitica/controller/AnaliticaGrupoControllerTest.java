@@ -100,6 +100,7 @@ class AnaliticaGrupoControllerTest {
                 .andExpect(jsonPath("$.dimensiones[0].promedio").value(75.0))
                 .andExpect(jsonPath("$.dimensiones[0].estudiantesEvaluados").value(2))
                 .andExpect(jsonPath("$.estudiantes[0].nombres").value("Ana"))
+                .andExpect(jsonPath("$.estudiantes[0].porcentajeDiagnostico").value(25.0))
                 .andExpect(jsonPath("$.estudiantes[0].categoriaDiagnostico").value("ALTO_RIESGO"))
                 .andExpect(jsonPath("$.estudiantes[0].enRiesgo").value(true))
                 .andExpect(jsonPath("$.estudiantes[1].nombres").value("Beto"))
@@ -163,13 +164,16 @@ class AnaliticaGrupoControllerTest {
 
     @Test
     void reporteDocenteNoExponeCorreosYConservaLaValidacionDePropiedad() throws Exception {
-        intento(ana, "DIF-ALG-1-01", 1, true, "2026-08-10T15:00:00Z");
+        diagnostico(ana, "ALTO_RIESGO", "2026-08-09T15:00:00Z", "ALGEBRAICA", 2, "BAJO");
 
         mockMvc.perform(get(BASE + "/" + grupoId + "/reporte")
                         .header("Authorization", tokenDocente))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estudiantes[0].nombres").value("Ana"))
-                .andExpect(jsonPath("$.estudiantes[0].enRiesgo").value(false))
+                .andExpect(jsonPath("$.estudiantes[0].intentos").value(0))
+                .andExpect(jsonPath("$.estudiantes[0].promedio").value(nullValue()))
+                .andExpect(jsonPath("$.estudiantes[0].porcentajeDiagnostico").value(25.0))
+                .andExpect(jsonPath("$.estudiantes[0].enRiesgo").value(true))
                 .andExpect(jsonPath("$.estudiantes[0].correo").doesNotExist());
 
         mockMvc.perform(get(BASE + "/" + grupoId + "/reporte")
