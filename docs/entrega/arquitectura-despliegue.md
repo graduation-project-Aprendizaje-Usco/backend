@@ -9,14 +9,13 @@ flowchart LR
     U[Estudiante / Docente / Administrador] -->|HTTPS| F[SPA React + Vite]
     F -->|Bearer JWT / JSON| B[API Spring Boot]
     B -->|JPA / Flyway| P[(PostgreSQL 17)]
-    B -->|SMTP opcional| M[Servicio de correo]
-    F -->|SMTP no aplica| M
+    B -->|HTTPS / Resend API| M[Servicio de correo]
 ```
 
 - **Frontend:** React 19, Vite 8, React Router 8, MUI, Axios, Recharts, KaTeX.
 - **Backend:** Spring Boot 4.1, Java 21, Spring Security + OAuth2 Resource Server, Spring Data JPA, Flyway, Springdoc.
 - **Base de datos:** PostgreSQL 17 (Docker local; Neon en producción). Flyway es la única fuente del esquema; Hibernate solo valida (`ddl-auto: validate`).
-- **Correo:** integración SMTP opcional para invitaciones. Sin `MAIL_HOST`, `MAIL_USERNAME` y `MAIL_PASSWORD`, el backend registra el enlace en el log (modo local/test).
+- **Correo:** integración HTTPS con Resend para invitaciones de grupo y activación de cuentas. Sin `RESEND_API_KEY`, los envíos fallan explícitamente con HTTP 503; los tokens nunca se escriben en logs.
 
 ## 2. Módulos implementados
 
@@ -57,10 +56,8 @@ El detalle está en [`docs/base-de-datos/modelo-fisico.md`](../base-de-datos/mod
 | `CORS_ORIGINS` | Orígenes permitidos del frontend en local/staging |
 | `FRONTEND_URL` | Origen del frontend en producción: CORS y enlaces `/registro?token=…` (sin barra final) |
 | `PORT` | Puerto HTTP que asigna Render; la app lo lee automáticamente |
-| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP de invitaciones (Gmail: `smtp.gmail.com` / `587` / contraseña de aplicación) |
-| `MAIL_SMTP_AUTH` / `MAIL_STARTTLS` | Autenticación y STARTTLS del SMTP |
-| `MAIL_HEALTH_ENABLED` | Incluir el correo en `/actuator/health` (por defecto `false`) |
-| `MAIL_FROM` | Remitente; si se omite, usa `MAIL_USERNAME` |
+| `RESEND_API_KEY` | API Key secreta de Resend; solo backend |
+| `MAIL_FROM` | Remitente verificado; por defecto `Aprendizaje USCO <noreply@aprendizaje-usco.tech>` |
 
 ### Frontend
 

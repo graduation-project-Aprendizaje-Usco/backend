@@ -290,8 +290,8 @@ Script: `pruebas/rendimiento/k6-practica-diagnostico.js`, ejecutado con k6 en Do
 | Método y ruta | Qué hace | Respuestas |
 |---|---|---|
 | `GET /api/admin/usuarios?buscar&rol&estado` | Lista con búsqueda en nombres, apellidos y correo, y filtros por rol y estado (todos opcionales) | 200 |
-| `POST /api/admin/usuarios` | Crea el usuario y envía el enlace para configurar la contraseña; no devuelve contraseñas ni tokens | 201 · 400 campos · 409 correo repetido · 422 estudiante sin correo de estudiante o sin programa · 503 correo SMTP no configurado |
-| `POST /api/admin/usuarios/{id}/reenviar-activacion` | Reenvía un enlace nuevo si la cuenta aún no definió su contraseña | 204 · 401 · 403 · 404 · 409 |
+| `POST /api/admin/usuarios` | Crea el usuario y envía el enlace para configurar la contraseña; no devuelve contraseñas ni tokens | 201 · 400 campos · 409 correo repetido · 422 estudiante sin correo de estudiante o sin programa · 503 Resend no disponible |
+| `POST /api/admin/usuarios/{id}/reenviar-activacion` | Reenvía un enlace nuevo si la cuenta aún no definió su contraseña | 204 · 401 · 403 · 404 · 409 · 503 Resend no disponible |
 | `POST /api/auth/activar-cuenta` | Consume el token de un solo uso y guarda la contraseña con BCrypt | 204 · 400 · 404 token inválido · 422 token vencido o usado |
 | `PUT /api/admin/usuarios/{id}` | Cambia nombres, apellidos, rol y programa (el correo no se cambia) | 200 · 404 · 422 si el administrador se quita su propio rol |
 | `PATCH /api/admin/usuarios/{id}/estado` | `{ "estado": "ACTIVO" \| "INACTIVO" }` | 200 · 404 · 422 si el administrador se desactiva a sí mismo |
@@ -303,7 +303,7 @@ Sin token responde 401 y con otro rol, 403.
 **Decisiones.**
 
 - **Configuración inicial:** cada alta genera una clave aleatoria no compartida, crea un token de 256 bits y envía un enlace válido por 7 días. La base guarda únicamente SHA-256 del token; al consumirlo, la clave elegida se guarda con BCrypt y el token queda marcado como usado. El enlace anterior se invalida al reenviarlo.
-- **Correo requerido para altas administrativas:** si SMTP no está configurado o falla el envío, la operación no crea la cuenta y devuelve un error; a diferencia de las invitaciones de grupo, el token de activación nunca se escribe en logs.
+- **Correo requerido para altas administrativas:** si Resend no está configurado o falla el envío, la operación no crea la cuenta y devuelve 503; a diferencia de las invitaciones de grupo, el token de activación nunca se escribe en logs.
 - **Mismas reglas que el registro para estudiantes:** correo `u` + 11 dígitos + `@usco.edu.co` y programa de la lista. Docentes y administradores no llevan programa.
 - **El administrador no puede desactivarse ni quitarse el rol ADMIN:** se quedaría sin acceso a esta pantalla.
 - **No se borran usuarios:** se desactivan, y así se conservan sus intentos y resultados.
@@ -314,13 +314,13 @@ Sin token responde 401 y con otro rol, 403.
 - Búsqueda y filtros.
 - Creación sin devolver contraseña, token de un solo uso, hash persistido y login tras activar.
 - Reenvío que invalida el enlace anterior; no se reenvía después de configurar la cuenta.
-- SMTP no configurado impide enviar el enlace y no registra el token en logs.
+- Resend sin clave o con fallo del proveedor impide enviar el enlace y no registra el token en logs.
 - Correo repetido (409) y estudiante inválido (422).
 - Edición del rol.
 - Usuario desactivado que no puede iniciar sesión y vuelve a poder al reactivarlo.
 - El administrador no puede desactivarse ni quitarse el rol.
 
-**Cómo probarlo a mano.** Configura SMTP y `FRONTEND_URL`; luego Swagger → login con `admin@aprendizaje.test` / `Admin2026*` → **Authorize** → `POST /api/admin/usuarios`. Abre el correo, define la contraseña en `/activar-cuenta?token=…` e inicia sesión. Si el enlace vence, usa **Reenviar enlace** en la lista de usuarios.
+**Cómo probarlo a mano.** Configura `RESEND_API_KEY`, `MAIL_FROM` y `FRONTEND_URL`; luego Swagger → login con un administrador → **Authorize** → `POST /api/admin/usuarios`. Abre el correo, define la contraseña en `/activar-cuenta?token=…` e inicia sesión. Si el enlace vence, usa **Reenviar enlace** en la lista de usuarios.
 
 ## 11. Panel del administrador (SCRUM-46)
 
@@ -424,10 +424,10 @@ Sin token responde 401 y con otro rol, 403.
 - Nueva tabla `invitacion` (correo, nombres, apellidos, grupo, hash del token, vencimiento y uso).
 - El docente carga el listado CSV, ve el estado (`INVITADO`, `REGISTRADO`, `VENCIDA`) y puede reenviar.
 - `POST /api/auth/registro` exige token válido, no usado, con el mismo correo; en la misma transacción crea el usuario, lo inscribe en el grupo y consume la invitación.
-- Correo por SMTP si `MAIL_HOST`, `MAIL_USERNAME` y `MAIL_PASSWORD` están configurados (Gmail usa `smtp.gmail.com`, puerto 587 y STARTTLS); en local/tests se registra el enlace (no-op).
+- Correo por Resend API HTTPS si `RESEND_API_KEY` está configurada; las pruebas reemplazan el cliente por mocks y no envían correos reales.
 - Endpoints: `GET/POST /api/grupos/{id}/invitaciones`, `POST /api/grupos/{id}/invitaciones/{id}/reenviar` y `GET /api/auth/invitacion?token=`.
 - Frontend: `/docente/estudiantes` para cargar el listado y `/registro?token=…` para el estudiante.
-- **Configuración:** `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SMTP_AUTH`, `MAIL_STARTTLS`, `MAIL_HEALTH_ENABLED`, `MAIL_FROM` (opcional) y `FRONTEND_URL`.
+- **Configuración:** `RESEND_API_KEY`, `MAIL_FROM` y `FRONTEND_URL`.
 - **Pruebas:** `InvitacionControllerTest` cubre invitación vigente, usada, vencida, correo distinto y docente ajeno.
 
 ## 20. Documentación técnica de la entrega (146)

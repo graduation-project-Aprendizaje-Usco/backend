@@ -92,10 +92,8 @@ Variables de entorno (en el hosting se definen en su panel, **nunca en el reposi
 | `CORS_ORIGINS` | Orígenes permitidos para el frontend (separados por coma) | `http://localhost:5173` | Origen(es) público(s); si se omite, usa `FRONTEND_URL` |
 | `FRONTEND_URL` | Origen del frontend para CORS y para armar `/registro?token=…` | `http://localhost:5173` | Dominio del frontend, sin barra final |
 | `PORT` | Puerto HTTP del servidor | `8080` | La asigna Render; no definir a mano |
-| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP para enviar invitaciones (Gmail: `smtp.gmail.com`, `587`, contraseña de aplicación) | sin configurar: el enlace se registra en el log | Opcional; sin configurar el enlace queda en el log |
-| `MAIL_SMTP_AUTH` / `MAIL_STARTTLS` | Autenticación y STARTTLS del SMTP | `true` | Opcional (`true`) |
-| `MAIL_HEALTH_ENABLED` | Incluir el correo en `/actuator/health` | `false` hasta configurar credenciales | Opcional (`false`) |
-| `MAIL_FROM` | Remitente de las invitaciones | si se omite, usa `MAIL_USERNAME` | Opcional |
+| `RESEND_API_KEY` | Clave Bearer para enviar correos mediante HTTPS con Resend | Vacía; necesaria para enviar | Obligatoria para enviar |
+| `MAIL_FROM` | Remitente verificado de Resend | `Aprendizaje USCO <noreply@aprendizaje-usco.tech>` | Opcional; mismo valor predeterminado |
 
 ### Administrador inicial
 
@@ -535,10 +533,20 @@ Solo `DOCENTE` dueño del grupo o `ADMIN`.
 | Método y ruta | Qué hace | Respuestas |
 |---|---|---|
 | `GET /api/grupos/{grupoId}/invitaciones` | Lista invitaciones con estado `INVITADO`, `REGISTRADO` o `VENCIDA` | 200 · 401 · 403 · 404 |
-| `POST /api/grupos/{grupoId}/invitaciones` | Carga un listado `{estudiantes:[{correo,nombres,apellidos}]}`, valida todo y envía los enlaces | 201 · 400 · 401 · 403 · 409 · 422 |
-| `POST /api/grupos/{grupoId}/invitaciones/{id}/reenviar` | Genera un token nuevo y reenvía el correo | 200 · 401 · 403 · 404 · 409 |
+| `POST /api/grupos/{grupoId}/invitaciones` | Carga un listado `{estudiantes:[{correo,nombres,apellidos}]}`, valida todo y envía los enlaces | 201 · 400 · 401 · 403 · 409 · 422 · 503 correo no enviado |
+| `POST /api/grupos/{grupoId}/invitaciones/{id}/reenviar` | Genera un token nuevo y reenvía el correo | 200 · 401 · 403 · 404 · 409 · 503 correo no enviado |
 | `GET /api/auth/invitacion?token=…` | Público: datos para precargar el registro | 200 · 404 · 422 |
 
 Las invitaciones vencen a los 7 días, son de un solo uso y se guardan hasheadas (SHA-256). Al registrarse se crea el usuario y la fila de `grupo_estudiante` en la misma transacción. Un estudiante puede pertenecer a varios grupos.
 
-Para Gmail: `MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=587`, `MAIL_SMTP_AUTH=true`, `MAIL_STARTTLS=true`, y en `MAIL_PASSWORD` una **contraseña de aplicación** de Google (requiere verificación en dos pasos), no la contraseña normal. Mientras falte usuario o contraseña, el enlace se escribe en el log.
+### Correo transaccional con Resend
+
+Todos los correos se envían por HTTPS con `POST https://api.resend.com/emails`.
+Configura `RESEND_API_KEY` y, si necesitas cambiar el remitente, `MAIL_FROM`.
+La API Key no se registra ni se incluye en el frontend. El dominio del remitente
+debe estar verificado en Resend.
+
+Si falta la clave, Resend rechaza la petición o no hay conexión, los endpoints
+responden 503 y no simulan un envío exitoso. Las invitaciones grupales quedan
+guardadas para poder reenviarlas desde el panel; si un lote falla parcialmente,
+puede haber correos previos ya entregados.

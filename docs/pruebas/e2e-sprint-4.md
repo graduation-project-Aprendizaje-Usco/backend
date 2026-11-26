@@ -25,7 +25,7 @@ Resultado local: **backend completo con 285 pruebas, 0 fallos** (incluye las 2 E
 Con `docker compose up -d --build` y `npm run dev` (backend en Docker), o con `docker compose up -d postgres pgadmin`, `.\mvnw.cmd spring-boot:run` y `npm run dev` si usas el backend local:
 
 1. Entrar como `admin@aprendizaje.test` / `Admin2026*`.
-2. En **Usuarios**, crear un docente; la persona recibe un correo para definir su contraseña en `/activar-cuenta?token=…`. SMTP debe estar configurado para que se envíe.
+2. En **Usuarios**, crear un docente; la persona recibe un correo para definir su contraseña en `/activar-cuenta?token=…`. `RESEND_API_KEY` debe estar configurada y el dominio del remitente verificado para que se envíe.
 3. En **Grupos** y **Actividades**, comprobar que el panel enlaza a las vistas y que muestran los datos reales.
 4. Cerrar sesión y entrar con el docente creado; crear un grupo e inscribir a un estudiante registrado.
 5. Entrar como estudiante; presentar el diagnóstico, resolver ejercicios en **Práctica** y abrir **Mi progreso**.

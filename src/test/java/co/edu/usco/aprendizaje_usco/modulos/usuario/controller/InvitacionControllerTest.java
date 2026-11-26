@@ -1,12 +1,18 @@
 package co.edu.usco.aprendizaje_usco.modulos.usuario.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import co.edu.usco.aprendizaje_usco.TestcontainersConfiguration;
+import co.edu.usco.aprendizaje_usco.common.exception.ServicioNoDisponibleException;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.GrupoRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.InvitacionRequest;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.dto.RegistroRequest;
@@ -18,10 +24,14 @@ import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.RolRepository;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.UsuarioRepository;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.service.GrupoService;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.service.InvitacionService;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.service.ResendEmailService;
 import co.edu.usco.aprendizaje_usco.security.JwtService;
 import co.edu.usco.aprendizaje_usco.security.UsuarioAutenticado;
 import jakarta.persistence.EntityManager;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,10 +41,14 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest(properties = "app.registro.invitacion-obligatoria=true")
+@SpringBootTest(properties = {
+        "app.registro.invitacion-obligatoria=true",
+        "app.invitaciones.url-base=http://localhost:5173/registro"
+})
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
@@ -64,6 +78,9 @@ class InvitacionControllerTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @MockitoBean
+    private ResendEmailService resendEmailService;
 
     private Usuario docente;
     private Usuario otroDocente;
@@ -96,6 +113,50 @@ class InvitacionControllerTest {
         mockMvc.perform(get("/api/grupos/{id}/invitaciones", grupoId)
                         .header("Authorization", bearer(otroDocente)))
                 .andExpect(status().isForbidden());
+
+        verify(resendEmailService, times(2)).enviar(anyString(),
+                eq("Invitación a Aprendizaje USCO"), anyString());
+    }
+
+    @Test
+    void reenviaInvitacionConTokenNuevoYConservaElEnlaceDeRegistro() throws Exception {
+        InvitacionService.InvitacionCreada creada = invitacionService.crearLote(grupoId, docente.getId(), false,
+                List.of(new InvitacionRequest("u20267777777@usco.edu.co", "Eva", "Seis"))).get(0);
+        ArgumentCaptor<String> texto = ArgumentCaptor.forClass(String.class);
+
+        mockMvc.perform(post("/api/grupos/{grupoId}/invitaciones/{invitacionId}/reenviar",
+                        grupoId, creada.invitacion().id())
+                        .header("Authorization", bearer(docente)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("INVITADO"));
+
+        verify(resendEmailService).enviar(eq("u20267777777@usco.edu.co"),
+                eq("Invitación a Aprendizaje USCO"), texto.capture());
+        String tokenNuevo = tokenDeTexto(texto.getValue());
+        assertThat(tokenNuevo).isNotEqualTo(creada.token());
+        assertThat(texto.getValue()).contains("http://localhost:5173/registro?token=" + tokenNuevo);
+
+        mockMvc.perform(get("/api/auth/invitacion").param("token", creada.token()))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/auth/invitacion").param("token", tokenNuevo))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void conservaLasInvitacionesYDevuelve503SiResendFalla() throws Exception {
+        doThrow(new ServicioNoDisponibleException("Resend no disponible"))
+                .when(resendEmailService).enviar(anyString(), anyString(), anyString());
+
+        mockMvc.perform(json(post("/api/grupos/{id}/invitaciones", grupoId), """
+                        {"estudiantes":[
+                          {"correo":"u20268888888@usco.edu.co","nombres":"Luz","apellidos":"Siete"}
+                        ]}""").header("Authorization", bearer(docente)))
+                .andExpect(status().isServiceUnavailable());
+
+        assertThat(invitacionService.listar(grupoId, docente.getId(), false))
+                .singleElement()
+                .extracting("estado")
+                .isEqualTo("INVITADO");
     }
 
     @Test
@@ -160,6 +221,14 @@ class InvitacionControllerTest {
 
     private String bearer(Usuario usuario) {
         return "Bearer " + jwtService.emitir(UsuarioAutenticado.desde(usuario)).valor();
+    }
+
+    private static String tokenDeTexto(String texto) {
+        Matcher matcher = Pattern.compile("token=([A-Za-z0-9_-]+)").matcher(texto);
+        if (!matcher.find()) {
+            throw new AssertionError("El correo no contenía un token de invitación");
+        }
+        return matcher.group(1);
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder json(

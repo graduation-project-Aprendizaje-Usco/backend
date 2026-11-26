@@ -34,6 +34,7 @@ class ProteccionDeEndpointsTest {
             "AuthController#login",       // público (SecurityConfig: permitAll)
             "AuthController#registrar",   // público (SecurityConfig: permitAll)
             "AuthController#invitacion",  // público: consulta el token de la invitación
+            "AuthController#activarCuenta", // público: consume el enlace de activación por correo
             "AuthController#me"           // cualquier usuario con sesión: devuelve sus propios datos
     );
 

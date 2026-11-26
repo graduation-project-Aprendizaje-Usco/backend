@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 
@@ -18,6 +20,7 @@ import co.edu.usco.aprendizaje_usco.modulos.usuario.model.Usuario;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.RolRepository;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.repository.UsuarioRepository;
 import co.edu.usco.aprendizaje_usco.modulos.usuario.service.GrupoService;
+import co.edu.usco.aprendizaje_usco.modulos.usuario.service.ResendEmailService;
 import co.edu.usco.aprendizaje_usco.security.JwtService;
 import co.edu.usco.aprendizaje_usco.security.UsuarioAutenticado;
 import com.jayway.jsonpath.JsonPath;
@@ -25,8 +28,6 @@ import jakarta.persistence.EntityManager;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.mockito.ArgumentCaptor;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +42,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest(properties = {"MAIL_HOST=smtp.test", "MAIL_USERNAME=test-user", "MAIL_PASSWORD=test-password"})
+@SpringBootTest(properties = "RESEND_API_KEY=re_test_key")
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
@@ -70,7 +71,7 @@ class AdminUsuarioControllerTest {
     private EntityManager entityManager;
 
     @MockitoBean
-    private JavaMailSender mailSender;
+    private ResendEmailService resendEmailService;
 
     private Usuario admin;
     private Usuario docente;
@@ -339,11 +340,9 @@ class AdminUsuarioControllerTest {
     }
 
     private String tokenDelCorreo(String correo) {
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-        verify(mailSender, atLeastOnce()).send(captor.capture());
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(resendEmailService, atLeastOnce()).enviar(eq(correo), anyString(), captor.capture());
         return captor.getAllValues().stream()
-                .filter(mensaje -> mensaje.getTo() != null && java.util.List.of(mensaje.getTo()).contains(correo))
-                .map(SimpleMailMessage::getText)
                 .map(texto -> {
                     Matcher matcher = Pattern.compile("token=([A-Za-z0-9_-]+)").matcher(texto);
                     return matcher.find() ? matcher.group(1) : null;

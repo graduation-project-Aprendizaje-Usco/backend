@@ -56,6 +56,8 @@ public class InvitacionController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "422", description = "Correo o nombres inválidos",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "503", description = "Resend no está configurado o no pudo aceptar el correo",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public List<InvitacionResponse> cargar(@PathVariable Long grupoId,
                                             @Valid @RequestBody InvitacionLoteRequest request,
                                             @AuthenticationPrincipal Jwt jwt) {
@@ -69,6 +71,8 @@ public class InvitacionController {
 
     @PostMapping("/{invitacionId}/reenviar")
     @Operation(summary = "Reenviar una invitación", description = "Genera un token nuevo y vuelve a enviar el enlace.")
+    @ApiResponse(responseCode = "503", description = "Resend no está configurado o no pudo aceptar el correo",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public InvitacionResponse reenviar(@PathVariable Long grupoId, @PathVariable Long invitacionId,
                                        @AuthenticationPrincipal Jwt jwt) {
         InvitacionService.InvitacionCreada creada = invitacionService.reenviar(

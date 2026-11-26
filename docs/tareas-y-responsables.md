@@ -1100,7 +1100,7 @@ El conteo de Jorel incluye la tarea nueva #150 (registro por invitación), que a
 
 **Subtareas**
 
-- **#151 Elegir y configurar el servicio de correo.** Comparar opciones (SMTP de una cuenta del semillero u otro servicio), configurar las credenciales como variables de entorno y documentarlas en el README.
+- **#151 Configurar el servicio de correo transaccional con Resend.** Crear y verificar el dominio, configurar la API Key como variable de entorno y documentarla en el README.
   - Criterio: Un correo de prueba llega desde el entorno de staging.
   - Criterio: Ninguna credencial queda en el repositorio.
 - **#152 Carga del listado del grupo.** Endpoint para que el docente suba el listado de su grupo (CSV exportado de Excel con correo y nombres); valida el formato del correo de estudiante y registra cada fila en grupo_estudiante como INVITADO.

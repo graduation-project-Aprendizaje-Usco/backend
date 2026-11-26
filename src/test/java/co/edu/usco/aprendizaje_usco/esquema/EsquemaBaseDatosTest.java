@@ -72,7 +72,8 @@ public class EsquemaBaseDatosTest {
                 "5|V5__esquema_practica.sql|-1136012897",
                 "6|V6__datos_ejercicios_semilla.sql|439716676",
                 "7|V7__crear_grupos_docentes_estudiantes.sql|-996979361",
-                "8|V8__crear_invitaciones.sql|1417255635");
+                "8|V8__crear_invitaciones.sql|1417255635",
+                "9|V9__crear_activacion_cuenta.sql|1534024417");
     }
 
     @Test

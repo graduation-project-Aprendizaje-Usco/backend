@@ -31,7 +31,8 @@ aplicarse solo las migraciones de `src/main/resources/db/migration`.
 | `SPRING_FLYWAY_LOCATIONS` | No | Déjala sin definir (por defecto solo `classpath:db/migration`). |
 | `SPRING_DOCKER_COMPOSE_ENABLED` | Sí | Define `false`; Render no debe iniciar Docker Compose. |
 | `PORT` | No | Render la asigna automáticamente. La aplicación ya la lee; **no la definas a mano**. |
-| `MAIL_*` | Para crear usuarios | SMTP para invitaciones y configuración de contraseña. Si no se configura, las invitaciones de grupo se escriben en el log, pero el alta administrativa se rechaza y no crea la cuenta. |
+| `RESEND_API_KEY` | Para enviar correos | API Key de Resend; solo se guarda en variables de entorno de Render. Sin ella los envíos responden 503. |
+| `MAIL_FROM` | No | Remitente verificado; por defecto `Aprendizaje USCO <noreply@aprendizaje-usco.tech>`. |
 
 Notas importantes:
 
@@ -41,13 +42,42 @@ Notas importantes:
   la URL de Neon con `sslmode=require` y las credenciales de Neon.
 - No escribas estos valores en el repositorio.
 
+## 3. Configurar Resend
+
+1. Crea una cuenta en Resend y agrega el dominio `aprendizaje-usco.tech` en
+   **Domains**.
+2. Copia a tu proveedor DNS los registros SPF, DKIM y los demás que indique
+   Resend. Espera a que el panel muestre el dominio como **Verified**.
+3. En **API Keys**, crea una clave con permiso para enviar correos y cópiala
+   directamente a Render como `RESEND_API_KEY`. No la pongas en Git, código,
+   documentación ni variables del frontend/Vercel.
+4. En Render configura `MAIL_FROM` como
+   `Aprendizaje USCO <noreply@aprendizaje-usco.tech>`. El valor predeterminado
+   del backend es el mismo; verifica que la dirección pertenezca al dominio
+   aprobado en Resend.
+5. Guarda las variables y vuelve a desplegar el backend.
+
+Para probar el envío, desde la aplicación crea un usuario administrativo de
+prueba o usa la opción de reenviar una invitación. Confirma la solicitud en los
+logs de Render y el evento correspondiente en **Resend → Emails**. No se hacen
+envíos durante las pruebas automatizadas.
+
+Los fallos de configuración, respuestas no exitosas de Resend y timeouts se
+registran sin incluir la API Key y se devuelven como HTTP 503; el backend no
+responde éxito cuando el proveedor rechaza el mensaje. Revisa el código HTTP y
+el evento en Resend: 401/403 suele indicar una clave o remitente sin permiso,
+422 datos/dominio no válidos y 429 límite de envío. Si Resend está caído, corrige
+el servicio y reintenta: las invitaciones grupales persisten y se pueden
+reenviar; un alta administrativa que no pudo enviar su activación se revierte.
+No se usa SMTP como alternativa.
+
 Genera `JWT_SECRET` con un valor aleatorio:
 
 ```bash
 openssl rand -base64 48
 ```
 
-## 3. Preparar Neon
+## 4. Preparar Neon
 
 1. Crea el proyecto y la base de datos en Neon.
 2. Copia los datos de conexión: host, puerto (`5432`), base, usuario y contraseña.
@@ -58,7 +88,7 @@ openssl rand -base64 48
 5. Usa una base vacía (o una que ya tenga el historial de Flyway). No apuntes a
    una base con tablas creadas por fuera de Flyway sin revisar el historial.
 
-## 4. Crear el servicio en Render
+## 5. Crear el servicio en Render
 
 ### Opción A: Docker (recomendada)
 
@@ -81,7 +111,7 @@ sobre Java 21. En Render:
 El build debe usar `-DskipTests`: las pruebas de integración usan Testcontainers
 y necesitan un Docker daemon que no está disponible durante el build de Render.
 
-## 5. Configuración efectiva en Render
+## 6. Configuración efectiva en Render
 
 - Conecta a Neon con la URL JDBC y credenciales definidas en Render.
 - Escucha en `server.port=${PORT:8080}` y en `0.0.0.0`.
@@ -96,7 +126,7 @@ y necesitan un Docker daemon que no está disponible durante el build de Render.
 - Configura los enlaces de invitación con `${FRONTEND_URL}/registro`.
 - No carga `db/dev-data`.
 
-## 6. Verificación después del despliegue
+## 7. Verificación después del despliegue
 
 1. `GET https://<backend-de-render>/actuator/health` debe responder `UP`.
 2. En los logs debe verse que Flyway aplicó las migraciones sin errores.
@@ -106,10 +136,10 @@ y necesitan un Docker daemon que no está disponible durante el build de Render.
    dominio de `FRONTEND_URL`.
 5. Inicia sesión con un usuario real y recorre un flujo básico.
 
-## 7. Seguridad y operación
+## 8. Seguridad y operación
 
 - Los secretos (`SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`,
-  `BOOTSTRAP_ADMIN_PASSWORD`, credenciales SMTP) viven solo en
+  `BOOTSTRAP_ADMIN_PASSWORD`, `RESEND_API_KEY`) viven solo en
   Render. No los subas al repositorio.
 - Rotar `JWT_SECRET` invalida los tokens emitidos: los usuarios deben volver a
   iniciar sesión.

@@ -64,7 +64,7 @@ public class AdminUsuarioController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "422", description = "Estudiante sin correo de estudiante o sin programa",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    @ApiResponse(responseCode = "503", description = "El correo SMTP no está configurado",
+    @ApiResponse(responseCode = "503", description = "Resend no está configurado o no pudo aceptar el correo",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public ResponseEntity<UsuarioCreadoResponse> crear(@Valid @RequestBody UsuarioAdminRequest request) {
         UsuarioCreadoResponse creado = adminUsuarioService.crear(request);
@@ -79,7 +79,7 @@ public class AdminUsuarioController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "409", description = "La cuenta ya configuró su contraseña",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    @ApiResponse(responseCode = "503", description = "El correo SMTP no está configurado",
+    @ApiResponse(responseCode = "503", description = "Resend no está configurado o no pudo aceptar el correo",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public ResponseEntity<Void> reenviarActivacion(@PathVariable Long id) {
         adminUsuarioService.reenviarActivacion(id);
